@@ -53,6 +53,7 @@ class LocationResultHelper {
     private NotificationManager mNotificationManager;
 
     LocationResultHelper(Context context, Location locations) {
+
         mContext = context;
         mLocations = locations;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -64,6 +65,11 @@ class LocationResultHelper {
         }
 
     }
+
+
+
+
+
     /**
      * Saves location result as a string to {@link android.content.SharedPreferences}.
      * @param loc

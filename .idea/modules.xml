@@ -4,7 +4,6 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/dwall_30-activitytracking-java-462560cccb89.iml" filepath="$PROJECT_DIR$/dwall_30-activitytracking-java-462560cccb89.iml" />
-      <module fileurl="file://$PROJECT_DIR$/dwall_30-researchproject_connexun-e45014ea2491 2 2.iml" filepath="$PROJECT_DIR$/dwall_30-researchproject_connexun-e45014ea2491 2 2.iml" />
     </modules>
   </component>
 </project>

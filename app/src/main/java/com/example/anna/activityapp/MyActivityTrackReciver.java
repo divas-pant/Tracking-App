@@ -1,5 +1,4 @@
 package com.example.anna.activityapp;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
@@ -28,9 +27,7 @@ import android.os.Build;
 
 import android.os.Bundle;
 import android.os.Handler;
-
 import android.os.Looper;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
@@ -61,7 +58,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -76,7 +72,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
-
 import static android.content.Context.MODE_PRIVATE;
 import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_ENTER;
 import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_EXIT;
@@ -92,6 +87,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     Cursor cursor;
     boolean location = false;
     boolean isdbEmpty=true;
+
     long time = 0;
     int level;
     String loc_event = "";
@@ -135,6 +131,8 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     String store_recent_activity_state="";
     String activity_detected_time;
     Timestamp timestamp1;
+    LocationListener locationListener;
+
     @Override
     public void onReceive(Context context, Intent intent) {
         mContext = context;
@@ -155,7 +153,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 row = handleDetectedActivities(result.getProbableActivities());
                 StringTokenizer tokens = new StringTokenizer(row, ",");
                 if (!tokens.hasMoreElements()) {
-
                 } else {
                     activity_detected_time = tokens.nextToken();
                 }
@@ -167,6 +164,11 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 }
 
                 if (!tokens.hasMoreElements()) {
+
+                }
+
+                if (!tokens.hasMoreElements()) {
+
                 } else {
                     confidence = tokens.nextToken();
                     confidence_score = Integer.parseInt(confidence);
@@ -178,6 +180,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
                 } else {
                    CallActivityRecog();
+
 
                 }
             } else {
@@ -197,7 +200,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     private void CallActivityRecog() {
         if (!isNullOrEmpty(row) &&  confidence_score > 95) {  // !check_state.equals(userstate)&&
-
             try{
                 String t= checkStateTime();
                 if(t.isEmpty()|| t.length()==0|| t.equals("")){
@@ -217,13 +219,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else {
-
-            EventBus.getDefault().post(new OnReceiverEvent(check_state));
-
         }
-
-
     }
 
     private void callActivityTrans() {
@@ -272,6 +268,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                         break;
                     }
                     /* case DetectedActivity.IN_VEHICLE: {
+
                         act = "IN_VEHICLE";
                         break;
                     }
@@ -284,6 +281,10 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                         act = "ON_FOOT";
                         break;
                     }*/
+
+
+
+
                 }
 
             }
@@ -294,6 +295,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         return " " + time + "," + act + "," + max;
 
     }
+
 
     public void DetectCorrectActivity(final String row, String time) {
         /*if db is not empty and current activity is not equal to previous activity then we are using below logic
@@ -404,8 +406,18 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
             }
-        } }
+        }
+}
 
+    protected boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        if (netInfo != null && netInfo.isConnectedOrConnecting()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();
@@ -475,10 +487,10 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             if (isNullOrEmpty(checkfistRow)) {
                 SubmitData2SQLiteDB(state, time, message);
                 stateResultHelper.showNotification();
-
             } /*else if (state.equals(checkfistRow)) {
                 ///do nothing..
             } */else {
+
                 SubmitData2SQLiteDB(state, time, message);
                 stateResultHelper.showNotification();
 
@@ -487,6 +499,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             e.printStackTrace();
         }
         cursor.close();
+
 
 
     }
@@ -509,6 +522,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         int icount = mcursor.getCount();
         return  icount;
     }
+
 
     public String checkState() {
         String state = "";
@@ -618,6 +632,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 }
                 String Time = String.valueOf(createDate(time));
                 System.out.println("Time5"+ Time);
+
                 String ram_in = readMemInfo();
                 SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
                         "VALUES('" + Name + "','" + Time + "','"
@@ -643,6 +658,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         } else if (location == false) {
             String Time = String.valueOf(createDate(time));
             System.out.println("Time6"+ Time);
+
             String ram_in = readMemInfo();
             try {
                 SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
@@ -671,6 +687,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         c.setTimeInMillis(timestamp);
         Date d = c.getTime();
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy hh:mm a");
+
         return sdf.format(d);
     }
 
@@ -702,6 +719,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     }
 
     public String checkStateTime() throws ParseException {
+
         String time = "";
         Date date = null;
         long a = 0;
@@ -713,6 +731,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             } while (cursor.moveToNext());
         }
        /* if (!isNullOrEmpty(time)) {
+        if (!isNullOrEmpty(time)) {
             DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
             date = formatter.parse(time);
             // System.out.println("Today is " + date.getTime());
@@ -721,8 +740,9 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
         return time;
+        }
 
-    }
+
 
 
     public static int getBatteryPercentage(Context context) {
@@ -954,6 +974,4 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     private static Double toRad(Double value) {
         return value * Math.PI / 180;
     }
-
-
 }
