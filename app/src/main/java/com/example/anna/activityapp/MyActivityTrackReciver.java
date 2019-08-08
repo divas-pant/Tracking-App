@@ -85,11 +85,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     SQLiteDatabase SQLITEDATABASE;
     SQLiteHelper SQLITEHELPER;
     Cursor cursor;
-    boolean location = false;
-    boolean isdbEmpty=true;
-
     long time = 0;
-    int level;
     String loc_event = "";
     private  final long UPDATE_INTERVAL = 5000;
     private  final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 2;
@@ -127,11 +123,9 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     float range = 0.5f; // kilo Meters
     private static final int TEN_MINUTES = 4 * 60 * 1000;
     double lat1, lon1,lattitude,lognitude;
-
+    long addedtime;
     String store_recent_activity_state="";
     String activity_detected_time;
-    Timestamp timestamp1;
-    LocationListener locationListener;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -205,12 +199,10 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 if(t.isEmpty()|| t.length()==0|| t.equals("")){
                     DetectCorrectActivity(userstate, "");
                     EventBus.getDefault().post(new OnReceiverEvent(userstate));
-                    System.out.println("Time----"+t);
 
                 }else {
                     DetectCorrectActivity(userstate, t);
                     EventBus.getDefault().post(new OnReceiverEvent(userstate));
-                    System.out.println("Time----"+ t);
 
                 }
 
@@ -219,24 +211,24 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         } catch (Exception e) {
                 e.printStackTrace();
             }
+        }else {
+            EventBus.getDefault().post(new OnReceiverEvent(check_state));
+
         }
     }
 
     private void callActivityTrans() {
-        if (!isNullOrEmpty(row) && confidence_score > 95  ///!check_state.equals(userstate)
-                && userstate.equals(activity_trans)) {
+        if (!isNullOrEmpty(row) && confidence_score > 95) {
             try {
-                DetectCorrectActivity(userstate,"");
-                EventBus.getDefault().post(new OnReceiverEvent(userstate));
+                String t= checkStateTime();
+                if(t.isEmpty()|| t.length()==0|| t.equals("")){
+                    DetectCorrectActivity(userstate,"");
+                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
+                }else {
+                    DetectCorrectActivity(userstate,t);
+                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
+                }
 
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else if (!isNullOrEmpty(row) && confidence_score > 95
-                && !activity_trans.equals(userstate)) {   //  !check_state.equals(userstate)
-            try {    //
-                DetectCorrectActivity(activity_trans,"");
-                EventBus.getDefault().post(new OnReceiverEvent(activity_trans));
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -303,29 +295,20 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
           call activity recog in every 4 to 5min and compare with storeed time if current time is greater than stored time
           then we are updatating our db .(ie user is in same state from last 5 min)
          */
-
-      /*  SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
-        store_recent_activity_state= prefs.getString("localstate", "");
-        long t= prefs.getLong("localtime",0);
-
-        if(!checkState().isEmpty() && !row.equals(store_recent_activity_state)){
-            long tenAgo = System.currentTimeMillis()+ TEN_MINUTES;
-            SharedPreferences.Editor edit = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE).edit();
-            edit.putString("localstate",row);
-            edit.putLong("localtime",tenAgo);
-            edit.commit();
-
-        } else*/
-
-      if(checkState().isEmpty()){
+        if(checkState().isEmpty()){
             try {
+                createLocationRequest();
+                requestLocationUpdates();
                 final Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        InsertStateDataIntoDB(row, System.currentTimeMillis(), "");
+                        if(!isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
+                            System.out.println("Time9--"+"i am in empty check");
+                            InsertStateDataIntoDB(row, System.currentTimeMillis(), "");
+                        }
                     }
-                }, 2000);
+                }, 15000);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -336,42 +319,33 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
           Date date = null;
           try {
               date = formatter.parse(time);
-              System.out.println("Time7--"+ date);
-
               Timestamp ts=new Timestamp(date.getTime());
-              System.out.println("Time8--"+ ts);
               Calendar cal = Calendar.getInstance();
               cal.setTimeInMillis(ts.getTime());
               // add 5 minute
-              cal.add(Calendar.MINUTE, 5);
-              System.out.println("Time10--"+cal.getTime().getTime());
-              ts = new Timestamp(cal.getTime().getTime());
+              cal.add(Calendar.MINUTE, 4);
+              System.out.println("Time1--"+cal.getTime().getTime());
+              addedtime=cal.getTime().getTime();
               System.out.println("Time2--"+ date.getTime());
               System.out.println("Time3--"+ System.currentTimeMillis());
-              System.out.println("Time4--"+ ts );
           } catch (ParseException e) {
               e.printStackTrace();
           }
-          if (Math.abs(date.getTime()-System.currentTimeMillis())>240000){
-                try {
-                    String state = checkState();
-                        int count = checkPreviousState(store_recent_activity_state, state);
-                        if (count > 0) {
-                            location = true;
-                            createLocationRequest();
-                            requestLocationUpdates();
-                        } else {
-                            location=false;
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    String checkPrevStateLoc= checkPrevStateLoc();
-                if(!checkPrevStateLoc.isEmpty() && !isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
+          if (Math.abs(addedtime-System.currentTimeMillis())>240000){
+              System.out.println("Time4--"+"i am in");
+              String checkPrevStateLoc= checkPrevStateLoc();
+              if(!checkPrevStateLoc.isEmpty() && !isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
+                    System.out.println("Time5--"+"i am check");
                     String[] values = checkPrevStateLoc.split("-");
                     ArrayList list = new ArrayList(Arrays.asList(values));
                     lattitude= Double.parseDouble(String.valueOf(list.get(0)));
                     lognitude= Double.parseDouble(String.valueOf(list.get(1)));
+                    try {
+                        createLocationRequest();
+                        requestLocationUpdates();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
                     if (!tokenss.hasMoreElements()) {
 
@@ -384,40 +358,29 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                         lon1 = Double.parseDouble(tokenss.nextToken());
                     }
                     if(distance(lattitude,lognitude,lat1,lon1)>=range){
+                        System.out.println("Time6--"+"i am in distance check");
                         final Handler handler = new Handler();
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
+                                if(!isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
+                                    InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
+
+                                }
 
                             }
                         }, 15000);
                     }
 
-                }/*else {
-                    final Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
-                        }
-                    }, 15000);
-                }*/
+                }
 
 
             }
         }
+
 }
 
-    protected boolean isOnline() {
-        ConnectivityManager cm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo netInfo = cm.getActiveNetworkInfo();
-        if (netInfo != null && netInfo.isConnectedOrConnecting()) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+
 
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();
@@ -472,29 +435,13 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     }
 
     public void InsertStateDataIntoDB(String state, final long time, String message) {
-        String checkfistRow = "";
-        SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-        cursor = SQLITEDATABASE.rawQuery("SELECT id,name from demoTable_tracking order by id DESC limit 1 ", null);
         StateResultHelper stateResultHelper = new StateResultHelper(
                 mContext, state);
         stateResultHelper.saveActivityStateResults();
-        if (cursor.moveToFirst()) {
-            do {
-                checkfistRow = cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Name));
-            } while (cursor.moveToNext());
-        }
         try {
-            if (isNullOrEmpty(checkfistRow)) {
-                SubmitData2SQLiteDB(state, time, message);
-                stateResultHelper.showNotification();
-            } /*else if (state.equals(checkfistRow)) {
-                ///do nothing..
-            } */else {
+            SubmitData2SQLiteDB(state, time, message);
+            stateResultHelper.showNotification();
 
-                SubmitData2SQLiteDB(state, time, message);
-                stateResultHelper.showNotification();
-
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -503,26 +450,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
     }
-
-    public int checkPreviousState(String current, String previous) {
-        SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-        cursor = SQLITEDATABASE.rawQuery("select * from tblmovingStates where cstate=? and pstate=?",
-                new String[]{current, previous});
-        int count = cursor.getCount();
-
-        return cursor.getCount();
-
-    }
-
-    public int checkdb(){
-        SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-        String count = "SELECT count(*) FROM tblmovingStates";
-        Cursor mcursor = SQLITEDATABASE.rawQuery(count, null);
-        mcursor.moveToFirst();
-        int icount = mcursor.getCount();
-        return  icount;
-    }
-
 
     public String checkState() {
         String state = "";
@@ -575,61 +502,23 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     public void SubmitData2SQLiteDB(String Name, long time, String msg) {
         battery_stat = String.valueOf(getBatteryPercentage(mContext) + "%");
-        if (location == true) {
-            try {
-                String loc= LocationResultHelper.getSavedLocationResult(mContext);
-                SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-                if (!isNullOrEmpty(loc_event)) {
-                    StringTokenizer tokenss = new StringTokenizer(loc_event, ",");
-                    if (!tokenss.hasMoreElements()) {
-
-                    } else {
+        try {
+            SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
+            StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
+               if (!tokenss.hasMoreElements()) { } else {
                         latt = tokenss.nextToken();
                     }
-                    if (!tokenss.hasMoreElements()) {
-
-                    } else {
+                    if (!tokenss.hasMoreElements()) { } else {
                         lang = tokenss.nextToken();
                     }
 
-                    if (!tokenss.hasMoreElements()) {
-
-                    } else {
+                    if (!tokenss.hasMoreElements()) { } else {
                         accuracy = tokenss.nextToken();
                     }
-                    if (!tokenss.hasMoreElements()) {
-
-                    } else {
-                        provider = tokenss.nextToken();
-                    }
+                    if (!tokenss.hasMoreElements()) { } else {
+                        provider = tokenss.nextToken(); }
+                    System.out.println("Location--"+ latt+"--"+"--"+lang+"--"+ accuracy+"---"+ provider );
                     fetchAddress();
-                } else if(!isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
-                    String locationData = LocationResultHelper.getSavedLocationResult(mContext);
-                    StringTokenizer tokens = new StringTokenizer(locationData, ",");
-                    if (!tokens.hasMoreElements()) {
-
-                    }else {
-                        latt = tokens.nextToken();
-                    }
-                    if (!tokens.hasMoreElements()) {
-
-                    }else {
-                        lang = tokens.nextToken();
-                    }
-
-                    if (!tokens.hasMoreElements()) {
-
-                    }else {
-                        accuracy = tokens.nextToken();
-                    }
-                    if (!tokens.hasMoreElements()) {
-
-                    }else {
-                        provider = tokens.nextToken();
-                    }
-                    fetchAddress();
-
-                }
                 String Time = String.valueOf(createDate(time));
                 System.out.println("Time5"+ Time);
 
@@ -650,33 +539,11 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 e.printStackTrace();
             } finally {
                 removeLocationUpdates();
-                location = false;
                 LocationResultHelper.clearData(mContext);
 
             }
 
-        } else if (location == false) {
-            String Time = String.valueOf(createDate(time));
-            System.out.println("Time6"+ Time);
 
-            String ram_in = readMemInfo();
-            try {
-                SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
-                        "VALUES('" + Name + "', '"
-                        + Time + "','"
-                        + "-" + "','"
-                        + "-" + "','"
-                        + battery_stat + "','"
-                        + "-" + "','"
-                        + "-" + "','"
-                        + "-" + "','"
-                        + ram_in + "')";
-                SQLITEDATABASE.execSQL(SQLiteQuery);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-        }
 
 
     }
@@ -730,15 +597,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 time = cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_DETECTIONTIME));
             } while (cursor.moveToNext());
         }
-       /* if (!isNullOrEmpty(time)) {
-        if (!isNullOrEmpty(time)) {
-            DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
-            date = formatter.parse(time);
-            // System.out.println("Today is " + date.getTime());
-            a = date.getTime();
-        }*/
-
-
         return time;
         }
 
