@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -14,6 +17,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 
@@ -22,13 +26,18 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Build;
 
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
 import android.text.TextUtils;
@@ -38,6 +47,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.common.api.Api;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.ActivityTransition;
@@ -58,6 +68,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -71,121 +82,126 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import static android.content.Context.MODE_PRIVATE;
 import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_ENTER;
 import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_EXIT;
+import static io.fabric.sdk.android.services.network.HttpRequest.post;
 
 
 /*......
- Background reciver to detect the state....and pass through event bus to activity during forground and insert data during background
- */
+Background reciver to detect the state....and pass through event bus to activity during forground and insert data during background
+*/
 public class MyActivityTrackReciver extends BroadcastReceiver {
     String SQLiteQuery;
     SQLiteDatabase SQLITEDATABASE;
     SQLiteHelper SQLITEHELPER;
     Cursor cursor;
     long time = 0;
-    String loc_event = "";
-    private  final long UPDATE_INTERVAL = 5000;
-    private  final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 2;
-    private  final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;
+    private final long UPDATE_INTERVAL = 5000;
+    private final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 2;
+    private final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;
+    private Context mContext;
+    Geocoder geocoder;
     static final String ACTION_ACTIVITY_PROCESS_UPDATES =
             "com.google.android.gms.location.sample.backgroundlocationupdates.action" +
                     ".ACTIVITY_PROCESS_UPDATES";
-    private Context mContext;
-    String row;
-    Geocoder geocoder;
     List<Address> addresses = null;
-    String errorMessage = "";
-    String add = "";
-    String userstate = "";
+    String errorMessage = "" ,userstate="", confidence="",battery_stat="",check_state="",latt="",lang="",accuracy="",provider=""
+    ,activity_trans="",transitionType="",add = "",store_recent_activity_state="",activity_detected_time="",loc_event="",row;
     int confidence_score = 0;
-    String confidence = "";
-    String battery_stat = "";
-    String check_state;
     @SuppressLint("NewApi")
-    String latt = "";
-    String lang = "";
-    String accuracy = "";
-    String provider = "";
     private ArrayList<String> memInfo_array = new ArrayList<>();
-    private int available;
-    private int cached;
-    private int buffers;
-    private int free;
-    private int total;
-    private int used;
-    String activity_trans;
-    String transitionType;
+    private int available,cached,buffers,free,total,used;
     private LocationRequest mLocationRequest;
     LocationManager locationManager;
-    float range = 0.5f; // kilo Meters
-    private static final int TEN_MINUTES = 4 * 60 * 1000;
-    double lat1, lon1,lattitude,lognitude;
-    long addedtime;
-    String store_recent_activity_state="";
-    String activity_detected_time;
+    float range =0.5f; // kilo Meters
+    private static final int TEN_MINUTES =4*60*1000;
+    //private static final int TEN_MINUTES =5*1000;
+    final static String KEY_Noti = "noti";
+    double lat1, lon1,lattitude,lognitude, online_lat,online_long,location_network_lat,location_network_long;
+    private NotificationManager mNotificationManager;
+    final private static String PRIMARY_CHANNEL = "default";
 
     @Override
     public void onReceive(Context context, Intent intent) {
         mContext = context;
         locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        if (intent != null) {
-            geocoder = new Geocoder(mContext, Locale.getDefault());
-            final String action = intent.getAction();
-            SQLITEHELPER = new SQLiteHelper(context);
-            if (ActivityTransitionResult.hasResult(intent)) {
-                ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
-                for (ActivityTransitionEvent event : result.getTransitionEvents()) {
-                    activity_trans = toActivityString(event.getActivityType());
-                    transitionType = toTransitionType(event.getTransitionType());
-                }
-            }
-            if (ActivityRecognitionResult.hasResult(intent)) {
-                ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-                row = handleDetectedActivities(result.getProbableActivities());
-                StringTokenizer tokens = new StringTokenizer(row, ",");
-                if (!tokens.hasMoreElements()) {
-                } else {
-                    activity_detected_time = tokens.nextToken();
-                }
-
-                if (!tokens.hasMoreElements()) {
-
-                } else {
-                    userstate = tokens.nextToken();
-                }
-
-                if (!tokens.hasMoreElements()) {
-
-                }
-
-                if (!tokens.hasMoreElements()) {
-
-                } else {
-                    confidence = tokens.nextToken();
-                    confidence_score = Integer.parseInt(confidence);
-
-                }
-                check_state = checkState();
-                if (!isNullOrEmpty(activity_trans)) {
-                    callActivityTrans();
-
-                } else {
-                   CallActivityRecog();
-
-
-                }
-            } else {
-                String check_state = checkState();
-                EventBus.getDefault().post(new OnReceiverEvent(check_state));
-
-
-            }
-
-
+        Log.e("onRecive", String.valueOf(intent));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(PRIMARY_CHANNEL,
+                    context.getString(R.string.default_channel), NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setLightColor(Color.GREEN);
+            channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            getNotificationManager().createNotificationChannel(channel);
         }
+        try{
+            if (intent != null) {
+                final String action = intent.getAction();
+                if (ACTION_ACTIVITY_PROCESS_UPDATES.equals(action)) {
+                    geocoder = new Geocoder(mContext, Locale.getDefault());
+                    SQLITEHELPER = new SQLiteHelper(context);
+                    if (ActivityTransitionResult.hasResult(intent)) {
+                        ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
+                        for (ActivityTransitionEvent event : result.getTransitionEvents()) {
+                            activity_trans = toActivityString(event.getActivityType());
+                            transitionType = toTransitionType(event.getTransitionType());
+                            System.out.println(activity_trans);
+                        }
+                    }
+
+                    if (ActivityRecognitionResult.hasResult(intent)) {
+                        ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
+                        row = handleDetectedActivities(result.getProbableActivities());
+                        Log.e("onRecive", row);
+                        StringTokenizer tokens = new StringTokenizer(row, ",");
+                        if (!tokens.hasMoreElements()) {
+                        } else {
+                            activity_detected_time = tokens.nextToken();
+                        }
+
+                        if (!tokens.hasMoreElements()) {
+
+                        } else {
+                            userstate = tokens.nextToken();
+                        }
+
+                        if (!tokens.hasMoreElements()) {
+
+                        } else {
+                            confidence = tokens.nextToken();
+                            confidence_score = Integer.parseInt(confidence);
+
+                        }
+                        //check_state = checkState();
+                        if (!isNullOrEmpty(activity_trans)) {
+                            callActivityTrans();
+
+                        } else {
+                            CallActivityRecog();
+                            Log.e("onRecive", "recog");
+
+
+                        }
+                    } else {
+                        String check_state = checkState();
+                        EventBus.getDefault().post(new OnReceiverEvent(check_state));
+
+
+                    }
+
+
+                }
+
+            }
+
+        }catch (Exception e){
+            Crashlytics.logException(e);
+        }
+
 
 
     }
@@ -193,53 +209,66 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
     private void CallActivityRecog() {
-        if (!isNullOrEmpty(row) &&  confidence_score > 95) {  // !check_state.equals(userstate)&&
-            try{
-                String t= checkStateTime();
-                if(t.isEmpty()|| t.length()==0|| t.equals("")){
-                    DetectCorrectActivity(userstate, "");
-                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
+        String check_state = checkState();
+
+        if (!isNullOrEmpty(row) && confidence_score > 70) {
+            try {
+                if(userstate.equals("STILL")){
+                    Log.e("onRecive", "activityrecog"+userstate);
+                    DetectCorrectActivity(userstate);
+                    EventBus.getDefault().post(new OnReceiverEvent("STILL"));
 
                 }else {
-                    DetectCorrectActivity(userstate, t);
-                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
+                    if( userstate.equals("IN_VEHICLE") || userstate.equals("ON_FOOT") && confidence_score > 95){
+                     // Toast.makeText(mContext,"clearPref",Toast.LENGTH_LONG).show();
+                       SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.clear();
+                        editor.commit();
+                    }
 
                 }
-
-
-
-        } catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
+                Crashlytics.logException(e);
             }
-        }else {
-            EventBus.getDefault().post(new OnReceiverEvent(check_state));
+        }else{
+            System.out.println("2");
+            EventBus.getDefault().post(new OnReceiverEvent( "STILL"));
 
         }
+
     }
 
     private void callActivityTrans() {
-        if (!isNullOrEmpty(row) && confidence_score > 95) {
+        if (!isNullOrEmpty(activity_trans)) {
             try {
-                String t= checkStateTime();
-                if(t.isEmpty()|| t.length()==0|| t.equals("")){
-                    DetectCorrectActivity(userstate,"");
-                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
-                }else {
-                    DetectCorrectActivity(userstate,t);
-                    EventBus.getDefault().post(new OnReceiverEvent(userstate));
+                if(activity_trans.equals("STILL")){
+                    Log.e("onRecive", "activityrecog"+activity_trans);
+                    DetectCorrectActivity(activity_trans);
+                    EventBus.getDefault().post(new OnReceiverEvent(activity_trans));
+                }else{
+                    Log.e("onRecive", "activitytransElse"+ activity_trans);
+                    SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.clear();
+                    editor.commit();
                 }
 
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else {
-            EventBus.getDefault().post(new OnReceiverEvent(check_state));
-
+        }else {
+            System.out.println("4");
+            EventBus.getDefault().post(new OnReceiverEvent(activity_trans));
         }
-
-
     }
+
+
+
+
+
 
 
     public boolean isNullOrEmpty(String str) {
@@ -259,20 +288,20 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                         act = "STILL";
                         break;
                     }
-                    /* case DetectedActivity.IN_VEHICLE: {
+                     case DetectedActivity.IN_VEHICLE: {
 
-                        act = "IN_VEHICLE";
+                     act = "IN_VEHICLE";
                         break;
-                    }
-                    case DetectedActivity.WALKING: {
-                        act = "ON_FOOT";
-                        break;
-                    }
+                      }
+                   case DetectedActivity.WALKING: {
+                    act = "ON_FOOT";
+                     break;
+                       }
 
-                    case DetectedActivity.ON_FOOT: {
-                        act = "ON_FOOT";
-                        break;
-                    }*/
+                     case DetectedActivity.ON_FOOT: {
+                      act = "ON_FOOT";
+                      break;
+                         }
 
 
 
@@ -282,105 +311,167 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             }
 
         }
-
-
         return " " + time + "," + act + "," + max;
 
     }
 
 
-    public void DetectCorrectActivity(final String row, String time) {
-        /*if db is not empty and current activity is not equal to previous activity then we are using below logic
-          1- we  will store the time and state of recent activity we have fetched and add +5 min in them and call
-          call activity recog in every 4 to 5min and compare with storeed time if current time is greater than stored time
-          then we are updatating our db .(ie user is in same state from last 5 min)
-         */
+    public void DetectCorrectActivity(final String row) throws ParseException, InterruptedException {
         if(checkState().isEmpty()){
-            try {
-                createLocationRequest();
-                requestLocationUpdates();
-                final Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(!isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
-                            System.out.println("Time9--"+"i am in empty check");
-                            InsertStateDataIntoDB(row, System.currentTimeMillis(), "");
-                        }
-                    }
-                }, 15000);
-            } catch (Exception e) {
-                e.printStackTrace();
+            final Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    callLocationFromNetwork();
+               try {
+                   InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
+                }catch (Exception e){
+                 Crashlytics.logException(e);
+                     }
+
+
+                }
+            }, 8000);
+        }else {
+          SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
+            store_recent_activity_state= prefs.getString("localstate", "");
+            if(!row.equals(store_recent_activity_state)){
+                long time= System.currentTimeMillis()+TEN_MINUTES;
+                System.out.println("AddTime---"+time);
+                SharedPreferences.Editor edit = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE).edit();
+                edit.putString("localstate",row);
+                edit.putLong("localtime",time);
+                edit.commit();
+
             }
+            long storedtimeofprevtime=prefs.getLong("localtime", 0);
+            if(System.currentTimeMillis() > storedtimeofprevtime) {
+                Log.e("onRecive", "detect-if-timecheck"+storedtimeofprevtime);
+                String[] values = checkPrevStateLoc().split("-");
+                ArrayList list = new ArrayList(Arrays.asList(values));
+                if(!list.isEmpty() && list.size()!=0) {
+                    lattitude = Double.parseDouble(String.valueOf(list.get(0)));
+                    lognitude = Double.parseDouble(String.valueOf(list.get(1)));
+                    callLocation();
+                    final Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            checkdistance(lattitude,lognitude);
+                        }
+                    }, 12000);
 
 
-        }else{
-          DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy hh:mm a");
-          Date date = null;
-          try {
-              date = formatter.parse(time);
-              Timestamp ts=new Timestamp(date.getTime());
-              Calendar cal = Calendar.getInstance();
-              cal.setTimeInMillis(ts.getTime());
-              // add 5 minute
-              cal.add(Calendar.MINUTE, 4);
-              System.out.println("Time1--"+cal.getTime().getTime());
-              addedtime=cal.getTime().getTime();
-              System.out.println("Time2--"+ date.getTime());
-              System.out.println("Time3--"+ System.currentTimeMillis());
-          } catch (ParseException e) {
-              e.printStackTrace();
-          }
-          if (Math.abs(addedtime-System.currentTimeMillis())>240000){
-              System.out.println("Time4--"+"i am in");
-              String checkPrevStateLoc= checkPrevStateLoc();
-              if(!checkPrevStateLoc.isEmpty() && !isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
-                    System.out.println("Time5--"+"i am check");
-                    String[] values = checkPrevStateLoc.split("-");
-                    ArrayList list = new ArrayList(Arrays.asList(values));
-                    lattitude= Double.parseDouble(String.valueOf(list.get(0)));
-                    lognitude= Double.parseDouble(String.valueOf(list.get(1)));
-                    try {
-                        createLocationRequest();
-                        requestLocationUpdates();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
-                    if (!tokenss.hasMoreElements()) {
-
+                }else {
+                    LocationFinder finder;
+                    finder = new LocationFinder(mContext);
+                    if (finder.canGetLocation()) {
+                        lat1 = Double.parseDouble(String.valueOf(finder.getLatitude()));
+                        lon1 = Double.parseDouble(String.valueOf(finder.getLongitude()));
+                        InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
                     } else {
-                        lat1 = Double.parseDouble(tokenss.nextToken());
-                    }
-                    if (!tokenss.hasMoreElements()) {
-
-                    } else {
-                        lon1 = Double.parseDouble(tokenss.nextToken());
-                    }
-                    if(distance(lattitude,lognitude,lat1,lon1)>=range){
-                        System.out.println("Time6--"+"i am in distance check");
-                        final Handler handler = new Handler();
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                if(!isNullOrEmpty(LocationResultHelper.getSavedLocationResult(mContext))){
-                                    InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
-
-                                }
-
-                            }
-                        }, 15000);
+                        finder.showSettingsAlert();
                     }
 
                 }
 
-
             }
         }
 
-}
+    }
+
+    public void callLocation(){
+        createLocationRequest();
+        requestLocationUpdates();
 
 
+    }
+
+    public void callLocationFromNetwork(){
+        LocationFinder finder;
+        finder = new LocationFinder(mContext);
+        if (finder.canGetLocation()) {
+            latt = String.valueOf(finder.getLatitude());
+            lang = String.valueOf(finder.getLongitude());
+        } else {
+            finder.showSettingsAlert();
+        }
+    }
+
+    public void removeDataFromPref(){
+        removeLocationUpdates();
+       // LocationResultHelper.clearData(mContext);
+    }
+
+    private void checkdistance(double lattitude , double lognitude) {
+        StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
+        if (!tokenss.hasMoreElements()) { } else {
+            online_lat = Double.parseDouble(tokenss.nextToken());
+        }
+        if (!tokenss.hasMoreElements()) { } else {
+            online_long = Double.parseDouble(tokenss.nextToken());
+        }
+        System.out.println("The online_lat online_long--" + online_lat+" --"+ online_long);
+
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(online_lat!=0 && online_long!=0){
+                    LocationFinder finder;
+                    finder = new LocationFinder(mContext);
+                    if (finder.canGetLocation()) {
+                        location_network_lat = Double.parseDouble(String.valueOf(finder.getLatitude()));
+                        location_network_long = Double.parseDouble(String.valueOf(finder.getLongitude()));
+                        System.out.println("The location_network_lat location_network_long" + location_network_lat+" --"+ location_network_long);
+                    } else {
+                        finder.showSettingsAlert();
+                    }
+
+                }
+            }
+        }, 6000);
+
+        if(online_lat!=0 && online_long!=0){
+             DecimalFormat formatter = new DecimalFormat("0.0000");
+             float distance= Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)));
+             System.out.println("The1" + BigDecimal.valueOf(distance).toPlainString());
+            //Toast.makeText(mContext,"Online--"+String.valueOf(distance),Toast.LENGTH_LONG).show();
+
+            int retval = Float.compare(range, distance);
+             if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)))>=range){
+                 try {
+                     showNotification(online_lat,online_long);
+                     InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
+                 }catch (Exception e){
+                     Crashlytics.logException(e);
+                 }
+             }else {
+                 removeDataFromPref();
+
+             }
+         }else if(location_network_lat!=0 && location_network_long!=0) {
+             DecimalFormat formatter = new DecimalFormat("0.0000");
+             float dis= Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)));
+             //Toast.makeText(mContext,"Network--"+String.valueOf(dis),Toast.LENGTH_LONG).show();
+
+             System.out.println("The2" + BigDecimal.valueOf(dis).toPlainString());
+             int retval = Float.compare(range, dis);
+
+               if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)))>=range){
+                 try {
+                     InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
+                 }catch (Exception e){
+                     Crashlytics.logException(e);
+                 }
+
+             }else {
+                 removeDataFromPref();
+
+             }
+         }
+
+    }
 
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();
@@ -397,13 +488,13 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     public void requestLocationUpdates() {
         try {
 
-            // LocationRequestHelper.setRequesting(this, true);
-//            LocationServices.FusedLocationApi.requestLocationUpdates(
-//                    mGoogleApiClient, mLocationRequest, getPendingIntent());
+// LocationRequestHelper.setRequesting(this, true);
+// LocationServices.FusedLocationApi.requestLocationUpdates(
+// mGoogleApiClient, mLocationRequest, getPendingIntent());
             LocationServices.getFusedLocationProviderClient(mContext)
                     .requestLocationUpdates(mLocationRequest, getPendingIntent());
         } catch (SecurityException e) {
-            // LocationRequestHelper.setRequesting(this, false);
+// LocationRequestHelper.setRequesting(this, false);
             e.printStackTrace();
         }
     }
@@ -413,9 +504,9 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
      */
     public void removeLocationUpdates() {
 
-        // LocationRequestHelper.setRequesting(this, false);
-//        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient,
-//                getPendingIntent());
+// LocationRequestHelper.setRequesting(this, false);
+// LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient,
+// getPendingIntent());
         LocationServices.getFusedLocationProviderClient(mContext).removeLocationUpdates(getPendingIntent());
 
     }
@@ -429,7 +520,14 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     @Subscribe
     public void onLocationRecieved(OnLocationReciverEvent event) {
         loc_event = event.getLocation();
-
+        try {
+            DetectCorrectActivity(userstate);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("MyActivityLocEvent"+ loc_event);
 
 
     }
@@ -439,11 +537,12 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 mContext, state);
         stateResultHelper.saveActivityStateResults();
         try {
-            SubmitData2SQLiteDB(state, time, message);
+            SubmitData2SQLiteDB(state);
             stateResultHelper.showNotification();
 
         } catch (Exception e) {
             e.printStackTrace();
+            Crashlytics.logException(e);
         }
         cursor.close();
 
@@ -484,6 +583,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     public String checkPrevStateLoc(){
         String loc = "",loc1="",loc2="",loc3="";
+        String location;
         SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
         cursor = SQLITEDATABASE.rawQuery("SELECT id,name,lat,long,detection_time from demoTable_tracking order by id DESC limit 1 ", null);
         if(cursor==null)
@@ -496,52 +596,53 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 loc3= cursor.getString(Integer.parseInt(String.valueOf(cursor.getColumnIndex(SQLITEHELPER.KEY_Location_long))));
             } while (cursor.moveToNext());
         }
-
-        return loc2+"-"+ loc3;
+        location= loc2+"-"+ loc3;
+        return location;
     }
 
-    public void SubmitData2SQLiteDB(String Name, long time, String msg) {
+    public void SubmitData2SQLiteDB(String Name) {
+        SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
         battery_stat = String.valueOf(getBatteryPercentage(mContext) + "%");
         try {
             SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
             StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
-               if (!tokenss.hasMoreElements()) { } else {
-                        latt = tokenss.nextToken();
-                    }
-                    if (!tokenss.hasMoreElements()) { } else {
-                        lang = tokenss.nextToken();
-                    }
-
-                    if (!tokenss.hasMoreElements()) { } else {
-                        accuracy = tokenss.nextToken();
-                    }
-                    if (!tokenss.hasMoreElements()) { } else {
-                        provider = tokenss.nextToken(); }
-                    System.out.println("Location--"+ latt+"--"+"--"+lang+"--"+ accuracy+"---"+ provider );
-                    fetchAddress();
-                String Time = String.valueOf(createDate(time));
-                System.out.println("Time5"+ Time);
-
-                String ram_in = readMemInfo();
-                SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
-                        "VALUES('" + Name + "','" + Time + "','"
-                        + latt + "','"
-                        + lang + "','"
-                        + battery_stat + "','"
-                        + accuracy + "','"
-                        + provider + "','"
-                        + add + "','"
-                        + ram_in + "')";
-                SQLITEDATABASE.execSQL(SQLiteQuery);
-
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                removeLocationUpdates();
-                LocationResultHelper.clearData(mContext);
-
+            if (!tokenss.hasMoreElements()) { } else {
+                latt = tokenss.nextToken();
             }
+            if (!tokenss.hasMoreElements()) { } else {
+                lang = tokenss.nextToken();
+            }
+
+            if (!tokenss.hasMoreElements()) { } else {
+                accuracy = tokenss.nextToken();
+            }
+            if (!tokenss.hasMoreElements()) { } else {
+                provider = tokenss.nextToken();
+            }
+            fetchAddress();
+            System.out.println("Location--"+ latt+"--"+"--"+lang+"--"+ accuracy+"---"+ provider );
+            String Time = String.valueOf(System.currentTimeMillis());  //String.valueOf(createDate(System.currentTimeMillis()));
+            String ram_in = readMemInfo();
+            SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
+                    "VALUES('" + Name + "','" + Time + "','"
+                    + latt + "','"
+                    + lang + "','"
+                    + battery_stat + "','"
+                    + accuracy + "','"
+                    + provider + "','"
+                    + add + "','"
+                    + ram_in + "')";
+            SQLITEDATABASE.execSQL(SQLiteQuery);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            removeLocationUpdates();
+            LocationResultHelper.clearData(mContext);
+            editor.clear();
+            editor.commit();
+
+        }
 
 
 
@@ -549,56 +650,10 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     }
 
 
-    public CharSequence createDate(long timestamp) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(timestamp);
-        Date d = c.getTime();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy hh:mm a");
-
-        return sdf.format(d);
-    }
 
 
 
-    private boolean isAppIsInBackground(Context context) {
-        boolean isInBackground = true;
-        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
-            List<ActivityManager.RunningAppProcessInfo> runningProcesses = am.getRunningAppProcesses();
-            for (ActivityManager.RunningAppProcessInfo processInfo : runningProcesses) {
-                if (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
-                    for (String activeProcess : processInfo.pkgList) {
-                        if (activeProcess.equals(context.getPackageName())) {
-                            isInBackground = false;
-                        }
-                    }
-                }
-            }
-        } else {
-            List<ActivityManager.RunningTaskInfo> taskInfo = am.getRunningTasks(1);
-            ComponentName componentInfo = taskInfo.get(0).topActivity;
-            if (componentInfo.getPackageName().equals(context.getPackageName())) {
-                isInBackground = false;
-            }
-        }
 
-        return isInBackground;
-    }
-
-    public String checkStateTime() throws ParseException {
-
-        String time = "";
-        Date date = null;
-        long a = 0;
-        SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-        cursor = SQLITEDATABASE.rawQuery("SELECT id,detection_time from demoTable_tracking order by id DESC limit 1 ", null);
-        if (cursor.moveToFirst()) {
-            do {
-                time = cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_DETECTIONTIME));
-            } while (cursor.moveToNext());
-        }
-        return time;
-        }
 
 
 
@@ -615,38 +670,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
         return (int) (batteryPct * 100);
     }
-
-
-    private String getHealthString(Context context) {
-        IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        Intent batteryStatus = context.registerReceiver(null, iFilter);
-
-        int health = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_HEALTH, -1) : -1;
-
-
-        String healthString = "Unknown";
-
-        switch (health) {
-            case BatteryManager.BATTERY_HEALTH_DEAD:
-                healthString = "Dead";
-                break;
-            case BatteryManager.BATTERY_HEALTH_GOOD:
-                healthString = "Good";
-                break;
-            case BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE:
-                healthString = "Over Voltage";
-                break;
-            case BatteryManager.BATTERY_HEALTH_OVERHEAT:
-                healthString = "Over Heat";
-                break;
-            case BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE:
-                healthString = "Failure";
-                break;
-        }
-
-        return healthString;
-    }
-
     public String readMemInfo() {
         String total_ram = "";
         String avail_ram = "";
@@ -667,7 +690,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             try {
                 assert br != null;
                 while ((line = br.readLine()) != null) {
-//                    Log.d(TAG, line);
+// Log.d(TAG, line);
                     memInfo_array.add(line);
                 }
             } catch (IOException eee) {
@@ -748,14 +771,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     private static String toActivityString(int activity) {
         switch (activity) {
             case DetectedActivity.STILL:
-                return "STILL";
-            case DetectedActivity.ON_FOOT:
-                return "WALKING";
-            case DetectedActivity.WALKING:
-                return "ON_FOOT";
-            case DetectedActivity.IN_VEHICLE:
-                return "IN_VEHICLE";
-            default:
+                return "STILL";default:
                 return "UNKNOWN";
         }
     }
@@ -777,21 +793,21 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             addresses = geocoder.getFromLocation(
                     Double.parseDouble(latt),
                     Double.parseDouble(lang),
-                    // In this sample, get just a single address.
+// In this sample, get just a single address.
                     1);
         } catch (IOException ioException) {
-            // Catch network or other I/O problems.
+// Catch network or other I/O problems.
             errorMessage = mContext.getString(R.string.service_not_available);
             add=errorMessage;
 
         } catch (IllegalArgumentException illegalArgumentException) {
-            // Catch invalid latitude or longitude values.
+// Catch invalid latitude or longitude values.
             errorMessage = mContext.getString(R.string.invalid_lat_long_used);
             add=errorMessage;
 
 
         }
-        if (addresses == null || addresses.size()  == 0) {
+        if (addresses == null || addresses.size() == 0) {
             if (errorMessage.isEmpty()) {
                 errorMessage = mContext.getString(R.string.no_address_found);
                 add=errorMessage;
@@ -802,8 +818,8 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             Address address = addresses.get(0);
             ArrayList<String> addressFragments = new ArrayList<String>();
 
-            // Fetch the address lines using getAddressLine,
-            // join them, and send them to the thread.
+// Fetch the address lines using getAddressLine,
+// join them, and send them to the thread.
             for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
@@ -814,7 +830,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
 
-    private double distance(double lat1, double lon1, double lat2, double lon2) {
+   private double distance(double lat1, double lon1, double lat2, double lon2) {
         final int R = 6371; // Radious of the earth
         Double latDistance = toRad(lat2-lat1);
         Double lonDistance = toRad(lon2-lon1);
@@ -823,13 +839,91 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                         Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         Double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         Double distance = R * c;
-
+        //Toast.makeText(mContext,String.valueOf(distance),Toast.LENGTH_LONG).show();
         System.out.println("The distance between two lat and long is::" + distance);
-
-        return (distance);
+        return distance;
+        //return (Math.round(distance * 100D) / 100D);
     }
 
     private static Double toRad(Double value) {
         return value * Math.PI / 180;
     }
+
+
+
+
+
+
+    public void showNotification(double lat, double lang) {
+        Intent notificationIntent = new Intent(mContext, MainActivity.class);
+        // Construct a task stack.
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(mContext);
+        // Add the main Activity to the task stack as the parent.
+        stackBuilder.addParentStack(MainActivity.class);
+        // Push the content Intent onto the stack.
+        stackBuilder.addNextIntent(notificationIntent);
+        // Get a PendingIntent containing the entire back stack.
+        PendingIntent notificationPendingIntent =
+                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Notification.Builder notificationBuilder = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            long time = new Date().getTime();
+            String tmpStr = String.valueOf(time);
+            String last4Str = tmpStr.substring(tmpStr.length() - 5);
+            int notificationId = Integer.valueOf(last4Str);
+
+            notificationBuilder = new Notification.Builder(mContext,
+                    PRIMARY_CHANNEL)
+                    .setContentTitle("Location")
+                    .setContentText(lat+" , "+ lang)
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setAutoCancel(true)
+                    .setContentIntent(notificationPendingIntent);
+            getNotificationManager().notify(notificationId, notificationBuilder.build());
+        } else {
+            long time = new Date().getTime();
+            String tmpStr = String.valueOf(time);
+            String last4Str = tmpStr.substring(tmpStr.length() - 5);
+            int notificationId = Integer.valueOf(last4Str);
+//            int notificationId = 124;
+
+            /*
+             * Getting intent for start on click the notification
+             * */
+            //  notificationIntent = new Intent(mContext, MainActivity.class);
+            notificationIntent.putExtra("filter", "/home/notifications");
+            notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            /*
+             * Creating intent with unique id
+             * */
+            PendingIntent intent =
+                    PendingIntent.getActivity(mContext, notificationId, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(
+                    mContext);
+            Notification notification = builder.setContentIntent(intent)
+                    //.setSmallIcon(Icon.createWithBitmap(bitmap))
+                    .setSmallIcon(R.mipmap.ic_launcher)
+//                .setTicker(latitude + "-" + longitude + "-Speed:" + speed)
+                    //.setWhen(when)
+                    .setAutoCancel(true).setContentTitle("Get Location")
+                    //.setGroup(GROUP_KEY_EMAILS)
+//                .setChannelId(CHANNEL_ID)
+//                .setContentText(latitude + "-" + longitude + "" + "-Speed:" + speed+"\n"+"Time:"+(String) android.text.format.DateFormat.format(delegate, Calendar.getInstance().getTime())).build();
+                    .setContentTitle("Location")
+                    .setContentText(lat+" , "+lang).build();
+            NotificationManagerCompat notificationManager =
+                    NotificationManagerCompat.from(mContext);
+            notificationManager.notify(notificationId, notification);
+        }
+    }
+    private NotificationManager getNotificationManager() {
+        if (mNotificationManager == null) {
+            mNotificationManager = (NotificationManager) mContext.getSystemService(
+                    Context.NOTIFICATION_SERVICE);
+        }
+        return mNotificationManager;
+    }
 }
+

@@ -44,18 +44,19 @@ class LocationResultHelper {
 
     final static String KEY_LOCATION_UPDATES_RESULT = "location-update-result";
     final static String KEY_TIME = "time";
+    final static String KEY_Noti = "noti";
 
     final private static String PRIMARY_CHANNEL = "default";
 
 
     private Context mContext;
-    private Location mLocations;
+    private List<Location> mLocations;
     private NotificationManager mNotificationManager;
 
-    LocationResultHelper(Context context, Location locations) {
+    LocationResultHelper(Context context, List<Location> locations) {
 
         mContext = context;
-        mLocations = locations;
+        mLocations = (List<Location>) locations;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(PRIMARY_CHANNEL,
                     context.getString(R.string.default_channel), NotificationManager.IMPORTANCE_DEFAULT);
@@ -125,7 +126,7 @@ class LocationResultHelper {
      * Displays a notification with the location results.
      * @param loc
      */
-    void showNotification(String loc) {
+    public void showNotification(String loc) {
         Intent notificationIntent = new Intent(mContext, MainActivity.class);
         // Construct a task stack.
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(mContext);
@@ -162,7 +163,7 @@ class LocationResultHelper {
             /*
              * Getting intent for start on click the notification
              * */
-          //  notificationIntent = new Intent(mContext, MainActivity.class);
+            //  notificationIntent = new Intent(mContext, MainActivity.class);
             notificationIntent.putExtra("filter", "/home/notifications");
             notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             /*
@@ -188,9 +189,10 @@ class LocationResultHelper {
                     NotificationManagerCompat.from(mContext);
             notificationManager.notify(notificationId, notification);
         }
-
-
     }
+
+
+
     public static CharSequence createDate(long timestamp) {
         Calendar c = Calendar.getInstance();
         c.setTimeInMillis(timestamp);

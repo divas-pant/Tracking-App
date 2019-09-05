@@ -6,7 +6,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.widget.ListView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
 public class ListViewActivity extends Activity {
 	
@@ -69,7 +72,7 @@ public class ListViewActivity extends Activity {
                 do {
                     ID_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_ID)));
                     NAME_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Name)));
-                    PHONE_NUMBER_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_DETECTIONTIME)));
+                    PHONE_NUMBER_ArrayList.add(String.valueOf(createDate(Long.parseLong(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_DETECTIONTIME))))));
                     Location_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Location)));
                     Location_Long_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Location_long)));
                     Battery_ArrayList.add(cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Battery)));
@@ -104,6 +107,14 @@ public class ListViewActivity extends Activity {
 
     }
 
+    public CharSequence createDate(long timestamp) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(timestamp);
+        Date d = c.getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss a");
+
+        return sdf.format(d);
+    }
 
 
 }

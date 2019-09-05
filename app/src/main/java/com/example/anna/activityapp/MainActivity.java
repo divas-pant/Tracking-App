@@ -56,6 +56,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -98,34 +99,18 @@ import java.util.regex.Pattern;
 
 
 public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private GoogleApiClient mGoogleApiClient;
     private TextView data;
-    private int version = 1;
+    private int version = 1 , icon;
     private Button save, fab;
     ImageView img_activity;
-    int icon;
     String SQLiteQuery;
     SQLiteDatabase SQLITEDATABASE;
     SQLiteHelper SQLITEHELPER;
-    boolean accelerometer = true;
     Cursor cursor;
     SharedPreferences mPref;
     SharedPreferences.Editor medit;
     private String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission
             .ACCESS_FINE_LOCATION};
-    Geocoder geocoder;
-    private ArrayList<String> memInfo_array = new ArrayList<>();
-    private int available;
-    private int cached;
-    private int buffers;
-    private int free;
-    private int total;
-    private int used;
-    private LocationRequest mLocationRequest;
-    private  final long UPDATE_INTERVAL = 5000;
-    private  final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 2;
-    private  final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -134,21 +119,22 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         save = findViewById(R.id.btn_save);
         fab = findViewById(R.id.fab);
         data = findViewById(R.id.Result);
-        fab.setEnabled(true);
+        data.setText("Waiting for Activity Detection");
         img_activity = findViewById(R.id.img_activity);
         SQLITEHELPER = new SQLiteHelper(getApplicationContext());
+        IgnoreBattery();
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
-        geocoder = new Geocoder(this, Locale.getDefault());
         // Check if the user revoked runtime permissions.
-        if (arePermissionsEnabled()) {
-            //permissions granted, continue flow normally
-
-        } else {
+        if (arePermissionsEnabled()) { } else {
             requestMultiplePermissions();
         }
-        //insert static data for first time only
-        checkFirstRun();
+        if (Build.BRAND.equalsIgnoreCase("xiaomi") || (Build.BRAND.equalsIgnoreCase("Letv"))
+                || (Build.BRAND.equalsIgnoreCase("huawei")) || Build.BRAND.equalsIgnoreCase("oppo")
+                || Build.BRAND.equalsIgnoreCase("vivo")) {
+            ///////////////////////////////////-------------------/////////////////////////
+            testAutostart();
+        }
         mPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         medit = mPref.edit();
         fab.setOnClickListener(new View.OnClickListener() {
@@ -170,21 +156,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
             }
         });
-        /*.....
-        request for activity transition...
-         */
-
-        //IgnoreBattery();
-        if (Build.BRAND.equalsIgnoreCase("xiaomi") || (Build.BRAND.equalsIgnoreCase("Letv"))
-                || (Build.BRAND.equalsIgnoreCase("huawei")) || Build.BRAND.equalsIgnoreCase("oppo")
-                || Build.BRAND.equalsIgnoreCase("vivo")) {
-            ///////////////////////////////////-------------------/////////////////////////
-            testAutostart();
-        }
-        IgnoreBattery();
-        ActivityManager activity_manager = (ActivityManager) MainActivity.this
-                .getSystemService(Activity.ACTIVITY_SERVICE);
-
 
     }
 
@@ -217,87 +188,19 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("resume", "Tag");
         DetectCorrectActivity(checkState());
 
 
     }
 
-    public static CharSequence createDate(long timestamp) {
-        SimpleDateFormat sdf = null;
-        Date d = null;
-        try {
-            Calendar c = Calendar.getInstance();
-            c.setTimeInMillis(timestamp);
-            d = c.getTime();
-            sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-        } catch (Exception e) {
-            e.printStackTrace();
-            Crashlytics.logException(e);
-        }
-
-        return sdf.format(d);
-    }
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setMaxWaitTime(MAX_WAIT_TIME);
-    }
-
-
-    /**
-     * Handles the Request Updates button and requests start of location updates.
-     */
-    public void requestLocationUpdates() {
-        try {
-
-            // LocationRequestHelper.setRequesting(this, true);
-//            LocationServices.FusedLocationApi.requestLocationUpdates(
-//                    mGoogleApiClient, mLocationRequest, getPendingIntent());
-            LocationServices.getFusedLocationProviderClient(getApplicationContext())
-                    .requestLocationUpdates(mLocationRequest, getPendingIntent());
-        } catch (SecurityException e) {
-            // LocationRequestHelper.setRequesting(this, false);
-            e.printStackTrace();
-            removeLocationUpdates();
-            requestLocationUpdates();
-        }
-    }
-    private PendingIntent getPendingIntent() {
-        Intent intent = new Intent(getApplicationContext(), LocationUpdatesBroadcastReceiver.class);
-        intent.setAction(LocationUpdatesBroadcastReceiver.ACTION_PROCESS_UPDATES);
-        return PendingIntent.getBroadcast(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    }
-    /**
-     * Handles the Remove Updates button, and requests removal of location updates.
-     */
-    public void removeLocationUpdates() {
-
-        // LocationRequestHelper.setRequesting(this, false);
-//        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient,
-//                getPendingIntent());
-        LocationServices.getFusedLocationProviderClient(getApplicationContext()).removeLocationUpdates(getPendingIntent());
-
-    }
-    /*....
-    detect state through eventbus..
-     */
     @Subscribe
     public void onPhoneNumberReceived(OnReceiverEvent event) {
         final String row = event.getActivityState();
         try {
             if (!isNullOrEmpty(row)) {
-                final Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DetectCorrectActivity(row);
-                        accelerometer = false;
-                    }
-                }, 3000);
-
+                DetectCorrectActivity(row);
+            }else {
+                callActivity();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -310,13 +213,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     detect state through google activity reco during forground..
      */
     public void DetectCorrectActivity(final String row) {
-        String acc_decision = "";
         if (row.equals("STILL")) {
             icon = R.drawable.ic_still;
-        } else if (row.equals("ON_FOOT")) {
-            icon = R.drawable.ic_walking;
-        } else if (row.equals("IN_VEHICLE")) {
-            icon = R.drawable.ic_driving;
         }
         data.setText(row);
         img_activity.setImageResource(icon);
@@ -339,8 +237,9 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 Cursor curCSV = db.rawQuery("SELECT * FROM demoTable_tracking", null);
                 csvWrite.writeNext(curCSV.getColumnNames());
                 while (curCSV.moveToNext()) {
+                    String time=String.valueOf(createDate(Long.parseLong(curCSV.getString(2))));
                     //Which column you want to exprort
-                    String arrStr[] = {curCSV.getString(0), curCSV.getString(1), curCSV.getString(2), curCSV.getString(3), curCSV.getString(4)
+                    String arrStr[] = {curCSV.getString(0), curCSV.getString(1), time, curCSV.getString(3), curCSV.getString(4)
                             , curCSV.getString(5), curCSV.getString(6), curCSV.getString(7), curCSV.getString(8)};
                     csvWrite.writeNext(arrStr);
                 }
@@ -365,65 +264,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     }
-
-
-    public void checkFirstRun() {
-        try {
-            boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("isFirstRun", true);
-            if (isFirstRun) {
-            /*..
-            create static table for state in which loction would be through...
-             */
-                StaticDBCreate();
-                // Place your static state data
-                insertDataIntoStaticTable();
-                getSharedPreferences("PREFERENCE", MODE_PRIVATE)
-                        .edit()
-                        .putBoolean("isFirstRun", false)
-                        .apply();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Crashlytics.logException(e);
-        }
-
-
-    }
-
-    private void insertDataIntoStaticTable() {
-        /*........
-        state in which location would be throws...
-         */
-        try {
-            SQLiteQuery = "INSERT INTO tblMovingStates (cstate,pstate) " +
-                    "VALUES" +
-                    "('" + "IN_VEHICLE" + "', '" + "STILL" + "')" +
-                    ",('" + "ON_FOOT" + "', '" + "STILL" + "')" +
-                    ",('" + "STILL" + "', '" + "IN_VEHICLE" + "')" +
-                    ",('" + "STILL" + "', '" + "ON_FOOT" + "')";
-            SQLITEDATABASE.execSQL(SQLiteQuery);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Crashlytics.logException(e);
-        }
-
-
-    }
-
-    public void StaticDBCreate() {
-        try {
-            SQLITEDATABASE = openOrCreateDatabase("TrackingDb", Context.MODE_PRIVATE, null);
-            SQLITEDATABASE.execSQL("CREATE TABLE IF NOT EXISTS tblMovingStates" +
-                    "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, cstate VARCHAR," +
-                    " pstate VARCHAR);");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Crashlytics.logException(e);
-        }
-
-    }
-
     public boolean isNullOrEmpty(String str) {
         return str == null || str.isEmpty();
     }
@@ -449,16 +289,10 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         try {
             if (s.equals(StateResultHelper.KEY_ACTIVITY_STATE_RESULT)) {
                 final String row = StateResultHelper.getSavedActivityState(getApplicationContext());
-                final Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DetectCorrectActivity(row);
-                        accelerometer = false;
-                        //stoptimertask();
-                    }
-                }, 3000);
-
+                DetectCorrectActivity(row);
+            }else
+            {
+                callActivity();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -668,125 +502,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         }
 
     }
-
-    public static int getBatteryPercentage(Context context) {
-
-        IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        Intent batteryStatus = context.registerReceiver(null, iFilter);
-
-        int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
-        int scale = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1) : -1;
-
-        float batteryPct = level / (float) scale;
-
-        return (int) (batteryPct * 100);
-    }
-
-    public String readMemInfo() {
-
-        String info_ram = null;
-        try {
-            String total_ram = "";
-            String avail_ram = "";
-            String free_ram = "";
-            DecimalFormat twoDecimalForm = new DecimalFormat("#.#");
-            double m;
-            double g;
-            double t;
-            BufferedReader br = null;
-            try {
-                String fpath = "/proc/meminfo";
-                try {
-                    br = new BufferedReader(new FileReader(fpath));
-                } catch (FileNotFoundException e1) {
-                    e1.printStackTrace();
-                }
-                String line;
-                try {
-                    assert br != null;
-                    while ((line = br.readLine()) != null) {
-//                    Log.d(TAG, line);
-                        memInfo_array.add(line);
-                    }
-                } catch (IOException eee) {
-                }
-            } catch (Exception masterTreta) {
-            }
-
-            for (int i = 0; i < memInfo_array.size(); i++) {
-                if (Pattern.matches("MemTotal:.*", memInfo_array.get(i))) {
-                    total = filterText(memInfo_array.get(i));
-                    m = total / 1024.0;
-                    g = total / 1048576.0;
-                    t = total / 1073741824.0;
-                    if (t > 1) {
-                        total_ram = twoDecimalForm.format(t).concat("TB");
-                    } else if (g > 1) {
-                        total_ram = twoDecimalForm.format(g).concat("GB");
-                    } else if (m > 1) {
-                        total_ram = twoDecimalForm.format(m).concat("MB");
-                    } else {
-                        total_ram = twoDecimalForm.format(total).concat("KB");
-                    }
-                }
-
-                if (Pattern.matches("MemFree:.*", memInfo_array.get(i))) {
-                    String hrSize;
-                    free = filterText(memInfo_array.get(i));
-
-                }
-
-                if (Pattern.matches("Buffers:.*", memInfo_array.get(i))) {
-                    buffers = filterText(memInfo_array.get(i));
-                }
-
-                if (Pattern.matches("Cached:.*", memInfo_array.get(i))) {
-                    cached = filterText(memInfo_array.get(i));
-                }
-            }
-
-            available = free + cached + buffers;
-            m = available / 1024.0;
-            g = available / 1048576.0;
-            t = available / 1073741824.0;
-
-            if (t > 1) {
-                avail_ram = twoDecimalForm.format(t).concat("TB");
-            } else if (g > 1) {
-                avail_ram = twoDecimalForm.format(g).concat("GB");
-            } else if (m > 1) {
-                avail_ram = twoDecimalForm.format(m).concat("MB");
-            } else {
-                avail_ram = twoDecimalForm.format(available).concat("KB");
-            }
-
-            used = total - (free + cached + buffers);
-            m = used / 1024.0;
-            g = used / 1048576.0;
-            t = used / 1073741824.0;
-            if (t > 1) {
-                free_ram = twoDecimalForm.format(t).concat("TB");
-            } else if (g > 1) {
-                free_ram = twoDecimalForm.format(g).concat("GB");
-            } else if (m > 1) {
-                free_ram = twoDecimalForm.format(m).concat("MB");
-            } else {
-                free_ram = twoDecimalForm.format(used).concat("KB");
-            }
-            info_ram = "Total-" + total_ram + " " + "Free-" + avail_ram + " " + "Used-" + free_ram;
-        } catch (Exception e) {
-            e.printStackTrace();
-            Crashlytics.logException(e);
-        }
-        return info_ram;
-    }
-
-    public int filterText(String str) {
-        String str2 = str.replaceAll("\\s+", " ");
-        String str3[] = str2.split(" ");
-        return Integer.parseInt(str3[1]);
-    }
-
     public String checkState() {
         String state = "";
         SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
@@ -797,9 +512,29 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             } while (cursor.moveToNext());
         }
 
-
         return state;
 
+
+    }
+
+
+    public CharSequence createDate(long timestamp) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(timestamp);
+        Date d = c.getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss a");
+
+        return sdf.format(d);
+    }
+
+
+    public void callActivity()
+    {
+        Intent intent = new Intent(getApplicationContext(), MyActivityTrackReciver.class);
+        intent.setAction(MyActivityTrackReciver.ACTION_ACTIVITY_PROCESS_UPDATES);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ActivityRecognition.getClient(this).requestActivityUpdates(8000, pendingIntent);
+        Toast.makeText(getApplicationContext(),"Hello i am restart from activity",Toast.LENGTH_LONG).show();
 
     }
 }
