@@ -221,7 +221,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 }else {
                     if( userstate.equals("IN_VEHICLE") || userstate.equals("ON_FOOT") && confidence_score > 95){
                      // Toast.makeText(mContext,"clearPref",Toast.LENGTH_LONG).show();
-                       SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
+                        SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
                         SharedPreferences.Editor editor = prefs.edit();
                         editor.clear();
                         editor.commit();
@@ -318,20 +318,19 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     public void DetectCorrectActivity(final String row) throws ParseException, InterruptedException {
         if(checkState().isEmpty()){
-            final Handler handler = new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    callLocationFromNetwork();
-               try {
-                   InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
-                }catch (Exception e){
-                 Crashlytics.logException(e);
-                     }
-
-
-                }
-            }, 8000);
+            callLocation();
+            StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
+            if (!tokenss.hasMoreElements()) { } else {
+                online_lat = Double.parseDouble(tokenss.nextToken());
+            }
+            if (!tokenss.hasMoreElements()) { } else {
+                online_long = Double.parseDouble(tokenss.nextToken());
+            }
+            if (online_lat!=0 && online_long!=0) {
+                InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
+            }else {
+                callLocationFromNetwork();
+            }
         }else {
           SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
             store_recent_activity_state= prefs.getString("localstate", "");
@@ -393,6 +392,10 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         if (finder.canGetLocation()) {
             latt = String.valueOf(finder.getLatitude());
             lang = String.valueOf(finder.getLongitude());
+            if(!latt.equals("0.0") && !lang.equals("0.0")){
+                InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
+            }
+
         } else {
             finder.showSettingsAlert();
         }
