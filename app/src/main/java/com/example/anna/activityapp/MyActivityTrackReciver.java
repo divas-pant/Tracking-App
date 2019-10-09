@@ -123,7 +123,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     private LocationRequest mLocationRequest;
     LocationManager locationManager;
     float range =0.5f; // kilo Meters
-    private static final int TEN_MINUTES =2*60*1000;
+    private static final int TEN_MINUTES =4*60*1000;
     //private static final int TEN_MINUTES =5*1000;
     final static String KEY_Noti = "noti";
     double lat1, lon1,lattitude,lognitude, online_lat,online_long,location_network_lat,location_network_long;
