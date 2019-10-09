@@ -11,6 +11,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -34,10 +35,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.TaskStackBuilder;
+import android.support.v7.app.AlertDialog;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
 import android.text.TextUtils;
@@ -49,6 +52,7 @@ import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.common.api.Api;
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
@@ -119,18 +123,15 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     private LocationRequest mLocationRequest;
     LocationManager locationManager;
     float range =0.5f; // kilo Meters
-    private static final int TEN_MINUTES =4*60*1000;
+    private static final int TEN_MINUTES =2*60*1000;
     //private static final int TEN_MINUTES =5*1000;
     final static String KEY_Noti = "noti";
     double lat1, lon1,lattitude,lognitude, online_lat,online_long,location_network_lat,location_network_long;
     private NotificationManager mNotificationManager;
     final private static String PRIMARY_CHANNEL = "default";
-
     @Override
     public void onReceive(Context context, Intent intent) {
         mContext = context;
-        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        Log.e("onRecive", String.valueOf(intent));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(PRIMARY_CHANNEL,
                     context.getString(R.string.default_channel), NotificationManager.IMPORTANCE_DEFAULT);
@@ -150,13 +151,12 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                             activity_trans = toActivityString(event.getActivityType());
                             transitionType = toTransitionType(event.getTransitionType());
                             System.out.println(activity_trans);
+                           // callActivityTrans();
                         }
                     }
-
                     if (ActivityRecognitionResult.hasResult(intent)) {
                         ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
                         row = handleDetectedActivities(result.getProbableActivities());
-                        Log.e("onRecive", row);
                         StringTokenizer tokens = new StringTokenizer(row, ",");
                         if (!tokens.hasMoreElements()) {
                         } else {
@@ -176,19 +176,17 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                             confidence_score = Integer.parseInt(confidence);
 
                         }
-                        //check_state = checkState();
-                        if (!isNullOrEmpty(activity_trans)) {
+                        CallActivityRecog(userstate);
+                     /*   if (!isNullOrEmpty(activity_trans)) {
                             callActivityTrans();
 
                         } else {
                             CallActivityRecog();
-                            Log.e("onRecive", "recog");
 
 
-                        }
-                    } else {
-                        String check_state = checkState();
-                        EventBus.getDefault().post(new OnReceiverEvent(check_state));
+                        }*/
+                    } else if(!activity_trans.isEmpty()){
+                        callActivityTrans(activity_trans);
 
 
                     }
@@ -207,20 +205,24 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     }
 
 
+    public void callActivity()
+    {
+        Intent intent = new Intent(mContext, MyActivityTrackReciver.class);
+        intent.setAction(MyActivityTrackReciver.ACTION_ACTIVITY_PROCESS_UPDATES);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ActivityRecognition.getClient(mContext).requestActivityUpdates(60000, pendingIntent);
 
-    private void CallActivityRecog() {
-        String check_state = checkState();
+    }
 
+    private void CallActivityRecog(String userstate) {
         if (!isNullOrEmpty(row) && confidence_score > 70) {
             try {
                 if(userstate.equals("STILL")){
-                    Log.e("onRecive", "activityrecog"+userstate);
                     DetectCorrectActivity(userstate);
                     EventBus.getDefault().post(new OnReceiverEvent("STILL"));
 
                 }else {
                     if( userstate.equals("IN_VEHICLE") || userstate.equals("ON_FOOT") && confidence_score > 95){
-                     // Toast.makeText(mContext,"clearPref",Toast.LENGTH_LONG).show();
                         SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
                         SharedPreferences.Editor editor = prefs.edit();
                         editor.clear();
@@ -240,15 +242,13 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     }
 
-    private void callActivityTrans() {
+    private void callActivityTrans(String activity_trans) {
         if (!isNullOrEmpty(activity_trans)) {
             try {
                 if(activity_trans.equals("STILL")){
-                    Log.e("onRecive", "activityrecog"+activity_trans);
                     DetectCorrectActivity(activity_trans);
                     EventBus.getDefault().post(new OnReceiverEvent(activity_trans));
                 }else{
-                    Log.e("onRecive", "activitytransElse"+ activity_trans);
                     SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.clear();
@@ -260,7 +260,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 e.printStackTrace();
             }
         }else {
-            System.out.println("4");
+
             EventBus.getDefault().post(new OnReceiverEvent(activity_trans));
         }
     }
@@ -298,14 +298,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                      break;
                        }
 
-                     case DetectedActivity.ON_FOOT: {
-                      act = "ON_FOOT";
-                      break;
-                         }
-
-
-
-
                 }
 
             }
@@ -316,7 +308,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     }
 
 
-    public void DetectCorrectActivity(final String row) throws ParseException, InterruptedException {
+    public void DetectCorrectActivity(String row) throws ParseException, InterruptedException {
         if(checkState().isEmpty()){
             callLocation();
             StringTokenizer tokenss = new StringTokenizer(LocationResultHelper.getSavedLocationResult(mContext), ",");
@@ -327,9 +319,9 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 online_long = Double.parseDouble(tokenss.nextToken());
             }
             if (online_lat!=0 && online_long!=0) {
-                InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
-            }else {
-                callLocationFromNetwork();
+                InsertStateDataIntoDB(row, System.currentTimeMillis(), "");
+            }else  {
+                callLocationFromNetwork(row);
             }
         }else {
           SharedPreferences prefs = mContext.getSharedPreferences("localdbstate", MODE_PRIVATE);
@@ -345,7 +337,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             }
             long storedtimeofprevtime=prefs.getLong("localtime", 0);
             if(System.currentTimeMillis() > storedtimeofprevtime) {
-                Log.e("onRecive", "detect-if-timecheck"+storedtimeofprevtime);
                 String[] values = checkPrevStateLoc().split("-");
                 ArrayList list = new ArrayList(Arrays.asList(values));
                 if(!list.isEmpty() && list.size()!=0) {
@@ -386,14 +377,14 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     }
 
-    public void callLocationFromNetwork(){
+    public void callLocationFromNetwork(String row){
         LocationFinder finder;
         finder = new LocationFinder(mContext);
         if (finder.canGetLocation()) {
             latt = String.valueOf(finder.getLatitude());
             lang = String.valueOf(finder.getLongitude());
             if(!latt.equals("0.0") && !lang.equals("0.0")){
-                InsertStateDataIntoDB(userstate, System.currentTimeMillis(), "");
+                InsertStateDataIntoDB(row, System.currentTimeMillis(), "");
             }
 
         } else {
@@ -414,8 +405,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         if (!tokenss.hasMoreElements()) { } else {
             online_long = Double.parseDouble(tokenss.nextToken());
         }
-        System.out.println("The online_lat online_long--" + online_lat+" --"+ online_long);
-
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
@@ -426,7 +415,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                     if (finder.canGetLocation()) {
                         location_network_lat = Double.parseDouble(String.valueOf(finder.getLatitude()));
                         location_network_long = Double.parseDouble(String.valueOf(finder.getLongitude()));
-                        System.out.println("The location_network_lat location_network_long" + location_network_lat+" --"+ location_network_long);
                     } else {
                         finder.showSettingsAlert();
                     }
@@ -436,13 +424,9 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         }, 6000);
 
         if(online_lat!=0 && online_long!=0){
-             DecimalFormat formatter = new DecimalFormat("0.0000");
-             float distance= Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)));
-             System.out.println("The1" + BigDecimal.valueOf(distance).toPlainString());
-            //Toast.makeText(mContext,"Online--"+String.valueOf(distance),Toast.LENGTH_LONG).show();
-
-            int retval = Float.compare(range, distance);
-             if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)))>=range){
+            DecimalFormat formatter = new DecimalFormat("0.0000");
+            //float distance= Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)).replaceAll(",","."));
+            if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,online_lat,online_long)).replaceAll(",","."))>=range){
                  try {
                      showNotification(online_lat,online_long);
                      InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
@@ -455,13 +439,8 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
              }
          }else if(location_network_lat!=0 && location_network_long!=0) {
              DecimalFormat formatter = new DecimalFormat("0.0000");
-             float dis= Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)));
-             //Toast.makeText(mContext,"Network--"+String.valueOf(dis),Toast.LENGTH_LONG).show();
-
-             System.out.println("The2" + BigDecimal.valueOf(dis).toPlainString());
-             int retval = Float.compare(range, dis);
-
-               if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)))>=range){
+            // float dis= Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)).replaceAll(",","."));
+             if(Float.parseFloat(formatter.format(distance(lattitude,lognitude,location_network_lat,location_network_long)).replaceAll(",","."))>=range){
                  try {
                      InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
                  }catch (Exception e){
@@ -535,12 +514,12 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
     }
 
-    public void InsertStateDataIntoDB(String state, final long time, String message) {
+    public void InsertStateDataIntoDB(String row, final long time, String message) {
         StateResultHelper stateResultHelper = new StateResultHelper(
-                mContext, state);
+                mContext, row);
         stateResultHelper.saveActivityStateResults();
         try {
-            SubmitData2SQLiteDB(state);
+            SubmitData2SQLiteDB(row);
             stateResultHelper.showNotification();
 
         } catch (Exception e) {
@@ -567,23 +546,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         return state;
 
     }
-
-    public String checkPreviousActivityTime() {
-        String state = "";
-        SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
-        cursor = SQLITEDATABASE.rawQuery("SELECT id,name from demoTable_tracking order by id DESC limit 1 ", null);
-        if (cursor.moveToFirst()) {
-            do {
-                state = cursor.getString(cursor.getColumnIndex(SQLiteHelper.KEY_Name));
-            } while (cursor.moveToNext());
-        }
-
-
-        return state;
-
-    }
-
-
     public String checkPrevStateLoc(){
         String loc = "",loc1="",loc2="",loc3="";
         String location;
@@ -639,6 +601,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             SQLITEDATABASE.execSQL(SQLiteQuery);
         } catch (Exception e) {
             e.printStackTrace();
+            Crashlytics.logException(e);
         } finally {
             removeLocationUpdates();
             LocationResultHelper.clearData(mContext);
@@ -928,5 +891,8 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
         }
         return mNotificationManager;
     }
+
+
+
 }
 

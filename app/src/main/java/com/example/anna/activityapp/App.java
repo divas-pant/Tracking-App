@@ -35,8 +35,9 @@ public class App extends Application {
         Intent intent = new Intent(getApplicationContext(), MyActivityTrackReciver.class);
         intent.setAction(MyActivityTrackReciver.ACTION_ACTIVITY_PROCESS_UPDATES);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        ActivityRecognition.getClient(this).requestActivityUpdates(60000, pendingIntent);
         ActivityRecognition.getClient(this).requestActivityTransitionUpdates(request, pendingIntent);
+        ActivityRecognition.getClient(this).requestActivityUpdates(60000, pendingIntent);
+
     }
 
 

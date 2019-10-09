@@ -43,6 +43,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 
 import android.support.v4.app.ActivityCompat;
@@ -100,7 +101,7 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
     private TextView data;
-    private int version = 1 , icon;
+    private int version = 1, icon;
     private Button save, fab;
     ImageView img_activity;
     String SQLiteQuery;
@@ -111,6 +112,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     SharedPreferences.Editor medit;
     private String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission
             .ACCESS_FINE_LOCATION};
+    AlertDialog.Builder mBuilder;
+    AlertDialog mDialog;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,12 +124,14 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         data = findViewById(R.id.Result);
         data.setText("Waiting for Activity Detection");
         img_activity = findViewById(R.id.img_activity);
+        mBuilder = new AlertDialog.Builder(MainActivity.this);
+        mDialog = mBuilder.create();
         SQLITEHELPER = new SQLiteHelper(getApplicationContext());
-        IgnoreBattery();
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
         // Check if the user revoked runtime permissions.
-        if (arePermissionsEnabled()) { } else {
+        if (arePermissionsEnabled()) {
+        } else {
             requestMultiplePermissions();
         }
         if (Build.BRAND.equalsIgnoreCase("xiaomi") || (Build.BRAND.equalsIgnoreCase("Letv"))
@@ -135,6 +140,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             ///////////////////////////////////-------------------/////////////////////////
             testAutostart();
         }
+        IgnoreBattery();
+
         mPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         medit = mPref.edit();
         fab.setOnClickListener(new View.OnClickListener() {
@@ -156,9 +163,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
             }
         });
-
+        //callActivity();
     }
-
 
 
     @Override
@@ -183,6 +189,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     protected void onDestroy() {
         super.onDestroy();
         EventBus.getDefault().unregister(this);
+        mDialog.dismiss();
     }
 
     @Override
@@ -199,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         try {
             if (!isNullOrEmpty(row)) {
                 DetectCorrectActivity(row);
-            }else {
+            } else {
                 callActivity();
             }
         } catch (Exception e) {
@@ -215,9 +222,16 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     public void DetectCorrectActivity(final String row) {
         if (row.equals("STILL")) {
             icon = R.drawable.ic_still;
+            data.setText(row);
+            img_activity.setImageResource(icon);
+            img_activity.setVisibility(View.VISIBLE);
+
+        } else {
+            img_activity.setVisibility(View.INVISIBLE);
+            data.setText("Waiting to detect the Activity...Please restart the app ");
+
         }
-        data.setText(row);
-        img_activity.setImageResource(icon);
+
     }
 
 
@@ -237,7 +251,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 Cursor curCSV = db.rawQuery("SELECT * FROM demoTable_tracking", null);
                 csvWrite.writeNext(curCSV.getColumnNames());
                 while (curCSV.moveToNext()) {
-                    String time=String.valueOf(createDate(Long.parseLong(curCSV.getString(2))));
+                    String time = String.valueOf(createDate(Long.parseLong(curCSV.getString(2))));
                     //Which column you want to exprort
                     String arrStr[] = {curCSV.getString(0), curCSV.getString(1), time, curCSV.getString(3), curCSV.getString(4)
                             , curCSV.getString(5), curCSV.getString(6), curCSV.getString(7), curCSV.getString(8)};
@@ -264,6 +278,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     }
+
     public boolean isNullOrEmpty(String str) {
         return str == null || str.isEmpty();
     }
@@ -290,8 +305,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             if (s.equals(StateResultHelper.KEY_ACTIVITY_STATE_RESULT)) {
                 final String row = StateResultHelper.getSavedActivityState(getApplicationContext());
                 DetectCorrectActivity(row);
-            }else
-            {
+            } else {
                 callActivity();
             }
         } catch (Exception e) {
@@ -352,25 +366,22 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     public void testAutostart() {
 
-        AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
+        mBuilder = new AlertDialog.Builder(MainActivity.this);
         View mView = getLayoutInflater().inflate(R.layout.dialog_app_updates, null);
         CheckBox mCheckBox = mView.findViewById(R.id.checkBox);
 
         if (Build.BRAND.equalsIgnoreCase("xiaomi")) {
-            mBuilder.setTitle("Add Activity App to autostart");
-            mBuilder.setMessage(String.format("%s requires to be enabled in 'autostart'" +
-                    " to send notifications.%n", getString(R.string.app_name)));
+            mBuilder.setTitle(R.string.permission_title);
+            mBuilder.setMessage(R.string.permission_text);
         } else if (Build.BRAND.equalsIgnoreCase("Letv")) {
 
-            mBuilder.setTitle("Add Activity App to autostart");
-            mBuilder.setMessage(String.format("%s requires to be enabled in 'autostart'" +
-                    " to send notifications.%n", getString(R.string.app_name)));
+            mBuilder.setTitle(R.string.permission_title);
+            mBuilder.setMessage(R.string.permission_text);
 
         } else if (Build.BRAND.equalsIgnoreCase("huawei")) {
 
-            mBuilder.setTitle("Add Activity App to Protected Apps");
-            mBuilder.setMessage(String.format("%s requires to be enabled in 'Protected Apps'" +
-                    " to send notifications.%n", getString(R.string.app_name)));
+            mBuilder.setTitle(R.string.permission_title);
+            mBuilder.setMessage(R.string.permission_text);
         }
 
         mBuilder.setView(mView);
@@ -461,7 +472,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             }
         });
 
-        AlertDialog mDialog = mBuilder.create();
+        mDialog = mBuilder.create();
         mDialog.show();
         mCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -488,20 +499,40 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         mEditor.apply();
     }
 
+
+
     private boolean getDialogStatus() {
         SharedPreferences mSharedPreferences = getSharedPreferences("CheckItem", MODE_PRIVATE);
         return mSharedPreferences.getBoolean("item", false);
     }
 
+    public void showbatterypermissionPopuptext() {
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
+        alertDialog.setTitle("Want Activity on to go?");
+        alertDialog.setMessage(R.string.battery_permission_text);
+        alertDialog.setPositiveButton("Update Setting", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                Intent intent = DozeHelper.prepareBatteryOptimization(MainActivity.this, getPackageName(), true);
+                startActivity(intent);
+            }
+        });
+        alertDialog.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+
+            }
+        });
+        alertDialog.show();
+    }
 
     public void IgnoreBattery() {
         String detect_whitelist = String.valueOf(DozeHelper.getisBatteryOptimizations(getApplicationContext(), getPackageName().toString()));
         if (detect_whitelist.equals("NOT_WHITE_LISTED")) {
-            Intent intent = DozeHelper.prepareBatteryOptimization(MainActivity.this, getPackageName(), true);
-            startActivity(intent);
+            showbatterypermissionPopuptext();
         }
 
     }
+
     public String checkState() {
         String state = "";
         SQLITEDATABASE = SQLITEHELPER.getWritableDatabase();
@@ -512,8 +543,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             } while (cursor.moveToNext());
         }
 
-        return state;
 
+        return state;
 
     }
 
@@ -528,13 +559,12 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
 
-    public void callActivity()
-    {
+    public void callActivity() {
         Intent intent = new Intent(getApplicationContext(), MyActivityTrackReciver.class);
         intent.setAction(MyActivityTrackReciver.ACTION_ACTIVITY_PROCESS_UPDATES);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ActivityRecognition.getClient(this).requestActivityUpdates(8000, pendingIntent);
-        Toast.makeText(getApplicationContext(),"Hello i am restart from activity",Toast.LENGTH_LONG).show();
+        // Toast.makeText(getApplicationContext(),"Hello i am restart from activity",Toast.LENGTH_LONG).show();
 
     }
 }

@@ -13,4 +13,9 @@
     <string name="service_not_available">Service not available</string>
     <string name="invalid_lat_long_used">Invalid lat and lang</string>
     <string name="no_address_found">No address found</string>
+    <string name="permission_text">Do you want to receive timely updates regarding the latest updates? You will reredirect to
+     setting screen , where you can enabe Autostart option under permission for Activity App</string>
+    <string name="permission_title">Enable Push Notifications</string>
+    <string name="battery_permission_text">Allow Activity App to run in background .We will send you top-notch recommendations
+    when you are out exploring</string>
 </resources>

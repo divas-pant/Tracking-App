@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/activityapp.iml" filepath="$PROJECT_DIR$/activityapp.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/dwall_30-activitytracking-java-462560cccb89.iml" filepath="$PROJECT_DIR$/dwall_30-activitytracking-java-462560cccb89.iml" />
     </modules>
   </component>
 </project>
