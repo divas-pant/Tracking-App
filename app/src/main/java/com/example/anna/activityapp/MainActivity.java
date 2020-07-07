@@ -3,71 +3,41 @@ package com.example.anna.activityapp;
 import android.Manifest;
 
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.AlertDialog;
 
 
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.net.ConnectivityManager;
 import android.net.Uri;
-import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
 
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
-import com.google.android.gms.common.api.GoogleApiClient;
+import com.example.anna.activityapp.db.SQLiteHelper;
 import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.ActivityRecognitionClient;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.opencsv.CSVWriter;
 
 import io.fabric.sdk.android.Fabric;
@@ -76,27 +46,16 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 
-import java.io.BufferedReader;
 import java.io.File;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
 import java.util.List;
-import java.util.Locale;
-
-import java.util.StringTokenizer;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.regex.Pattern;
 
 
 public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
@@ -219,19 +178,13 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     /*...
     detect state through google activity reco during forground..
      */
+
     public void DetectCorrectActivity(final String row) {
         if (row.equals("STILL")) {
             icon = R.drawable.ic_still;
-            data.setText(row);
-            img_activity.setImageResource(icon);
-            img_activity.setVisibility(View.VISIBLE);
-
-        } else {
-            img_activity.setVisibility(View.INVISIBLE);
-            data.setText("Waiting to detect the Activity...Please restart the app ");
-
         }
-
+        data.setText(row);
+        img_activity.setImageResource(icon);
     }
 
 

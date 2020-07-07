@@ -1,7 +1,5 @@
 package com.example.anna.activityapp;
-import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ActivityManager;
 
 
 import android.app.Notification;
@@ -9,59 +7,37 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Build;
 
-import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
-import android.preference.PreferenceManager;
-import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.TaskStackBuilder;
-import android.support.v7.app.AlertDialog;
-import android.telephony.TelephonyManager;
-import android.telephony.gsm.GsmCellLocation;
 import android.text.TextUtils;
-import android.util.Log;
-import android.view.View;
-import android.widget.TextView;
-import android.widget.Toast;
 
 
 import com.crashlytics.android.Crashlytics;
-import com.google.android.gms.common.api.Api;
+import com.example.anna.activityapp.db.SQLiteHelper;
+import com.example.anna.activityapp.utils.Consants;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;
 import com.google.android.gms.location.DetectedActivity;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import org.greenrobot.eventbus.EventBus;
@@ -72,27 +48,18 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import static android.content.Context.MODE_PRIVATE;
-import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_ENTER;
-import static com.google.android.gms.location.ActivityTransition.ACTIVITY_TRANSITION_EXIT;
+import static com.example.anna.activityapp.utils.Consants.getBatteryPercentage;
 import static io.fabric.sdk.android.services.network.HttpRequest.post;
 
 
@@ -118,8 +85,7 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     ,activity_trans="",transitionType="",add = "",store_recent_activity_state="",activity_detected_time="",loc_event="",row;
     int confidence_score = 0;
     @SuppressLint("NewApi")
-    private ArrayList<String> memInfo_array = new ArrayList<>();
-    private int available,cached,buffers,free,total,used;
+
     private LocationRequest mLocationRequest;
     LocationManager locationManager;
     float range =0.5f; // kilo Meters
@@ -588,7 +554,8 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             fetchAddress();
             System.out.println("Location--"+ latt+"--"+"--"+lang+"--"+ accuracy+"---"+ provider );
             String Time = String.valueOf(System.currentTimeMillis());  //String.valueOf(createDate(System.currentTimeMillis()));
-            String ram_in = readMemInfo();
+            Consants cst= new Consants(mContext);
+            String ram_in = cst.readMemInfo();
             SQLiteQuery = "INSERT INTO demoTable_tracking (name,detection_time,lat,long,battery,accuracy,provider,address,ram) " +
                     "VALUES('" + Name + "','" + Time + "','"
                     + latt + "','"
@@ -613,125 +580,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
 
 
-    }
-
-
-
-
-
-
-
-
-
-
-    public static int getBatteryPercentage(Context context) {
-
-        IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        Intent batteryStatus = context.registerReceiver(null, iFilter);
-
-        int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
-        int scale = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1) : -1;
-
-        float batteryPct = level / (float) scale;
-
-        return (int) (batteryPct * 100);
-    }
-    public String readMemInfo() {
-        String total_ram = "";
-        String avail_ram = "";
-        String free_ram = "";
-        DecimalFormat twoDecimalForm = new DecimalFormat("#.#");
-        double m;
-        double g;
-        double t;
-        BufferedReader br = null;
-        try {
-            String fpath = "/proc/meminfo";
-            try {
-                br = new BufferedReader(new FileReader(fpath));
-            } catch (FileNotFoundException e1) {
-                e1.printStackTrace();
-            }
-            String line;
-            try {
-                assert br != null;
-                while ((line = br.readLine()) != null) {
-// Log.d(TAG, line);
-                    memInfo_array.add(line);
-                }
-            } catch (IOException eee) {
-            }
-        } catch (Exception masterTreta) {
-        }
-
-        for (int i = 0; i < memInfo_array.size(); i++) {
-            if (Pattern.matches("MemTotal:.*", memInfo_array.get(i))) {
-                total = filterText(memInfo_array.get(i));
-                m = total / 1024.0;
-                g = total / 1048576.0;
-                t = total / 1073741824.0;
-                if (t > 1) {
-                    total_ram = twoDecimalForm.format(t).concat("TB");
-                } else if (g > 1) {
-                    total_ram = twoDecimalForm.format(g).concat("GB");
-                } else if (m > 1) {
-                    total_ram = twoDecimalForm.format(m).concat("MB");
-                } else {
-                    total_ram = twoDecimalForm.format(total).concat("KB");
-                }
-            }
-
-            if (Pattern.matches("MemFree:.*", memInfo_array.get(i))) {
-                String hrSize;
-                free = filterText(memInfo_array.get(i));
-
-            }
-
-            if (Pattern.matches("Buffers:.*", memInfo_array.get(i))) {
-                buffers = filterText(memInfo_array.get(i));
-            }
-
-            if (Pattern.matches("Cached:.*", memInfo_array.get(i))) {
-                cached = filterText(memInfo_array.get(i));
-            }
-        }
-
-        available = free + cached + buffers;
-        m = available / 1024.0;
-        g = available / 1048576.0;
-        t = available / 1073741824.0;
-
-        if (t > 1) {
-            avail_ram = twoDecimalForm.format(t).concat("TB");
-        } else if (g > 1) {
-            avail_ram = twoDecimalForm.format(g).concat("GB");
-        } else if (m > 1) {
-            avail_ram = twoDecimalForm.format(m).concat("MB");
-        } else {
-            avail_ram = twoDecimalForm.format(available).concat("KB");
-        }
-
-        used = total - (free + cached + buffers);
-        m = used / 1024.0;
-        g = used / 1048576.0;
-        t = used / 1073741824.0;
-        if (t > 1) {
-            free_ram = twoDecimalForm.format(t).concat("TB");
-        } else if (g > 1) {
-            free_ram = twoDecimalForm.format(g).concat("GB");
-        } else if (m > 1) {
-            free_ram = twoDecimalForm.format(m).concat("MB");
-        } else {
-            free_ram = twoDecimalForm.format(used).concat("KB");
-        }
-        String info_ram = "Total-" + total_ram + " " + "Free-" + avail_ram + " " + "Used-" + free_ram;
-        return info_ram;
-    }
-
-    public int filterText(String str) {
-        String str2 = str.replaceAll("\\s+", " ");
-        String str3[] = str2.split(" ");
-        return Integer.parseInt(str3[1]);
     }
 
     private static String toActivityString(int activity) {

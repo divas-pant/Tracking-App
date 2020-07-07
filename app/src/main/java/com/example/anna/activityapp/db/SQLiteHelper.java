@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.example.anna.activityapp.db;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
