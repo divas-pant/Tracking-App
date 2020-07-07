@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Connexun_ActivityApp_7thjuly-activityapp.iml" filepath="$PROJECT_DIR$/.idea/modules/Connexun_ActivityApp_7thjuly-activityapp.iml" group="activityapp" />
       <module fileurl="file://$PROJECT_DIR$/activityapp.iml" filepath="$PROJECT_DIR$/activityapp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/activityapp-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/activityapp-app.iml" group="activityapp/app" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
