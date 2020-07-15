@@ -1,18 +1,15 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.app.Application;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 
-import com.example.anna.activityapp.MyActivityTrackReciver;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class App extends Application {
 

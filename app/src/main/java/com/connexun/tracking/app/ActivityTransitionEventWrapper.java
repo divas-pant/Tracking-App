@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.DetectedActivity;

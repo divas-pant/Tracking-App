@@ -14,25 +14,21 @@
  * limitations under the License.
  */
 
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 
 import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
 
 import org.greenrobot.eventbus.EventBus;
 
 import java.util.List;
-import java.util.StringTokenizer;
 
 /**
  * Receiver for handling location updates.

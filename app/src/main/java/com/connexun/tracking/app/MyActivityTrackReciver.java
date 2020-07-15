@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 import android.annotation.SuppressLint;
 
 
@@ -9,7 +9,6 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -18,7 +17,6 @@ import android.location.Address;
 import android.location.Geocoder;
 
 import android.location.LocationManager;
-import android.os.BatteryManager;
 import android.os.Build;
 
 import android.os.Handler;
@@ -29,8 +27,8 @@ import android.text.TextUtils;
 
 
 import com.crashlytics.android.Crashlytics;
-import com.example.anna.activityapp.db.SQLiteHelper;
-import com.example.anna.activityapp.utils.Consants;
+import com.connexun.tracking.app.db.SQLiteHelper;
+import com.connexun.tracking.app.utils.Consants;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.ActivityTransition;
@@ -44,9 +42,6 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.ParseException;
@@ -57,9 +52,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import java.util.regex.Pattern;
+
 import static android.content.Context.MODE_PRIVATE;
-import static com.example.anna.activityapp.utils.Consants.getBatteryPercentage;
+import static com.connexun.tracking.app.utils.Consants.getBatteryPercentage;
 import static io.fabric.sdk.android.services.network.HttpRequest.post;
 
 
@@ -662,11 +657,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     private static Double toRad(Double value) {
         return value * Math.PI / 180;
     }
-
-
-
-
-
 
     public void showNotification(double lat, double lang) {
         Intent notificationIntent = new Intent(mContext, MainActivity.class);

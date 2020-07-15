@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.Manifest;
 
@@ -36,7 +36,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.crashlytics.android.Crashlytics;
-import com.example.anna.activityapp.db.SQLiteHelper;
+import com.connexun.tracking.app.db.SQLiteHelper;
 import com.google.android.gms.location.ActivityRecognition;
 import com.opencsv.CSVWriter;
 
@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -89,18 +90,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
         // Check if the user revoked runtime permissions.
-        if (arePermissionsEnabled()) {
-        } else {
-            requestMultiplePermissions();
-        }
-        if (Build.BRAND.equalsIgnoreCase("xiaomi") || (Build.BRAND.equalsIgnoreCase("Letv"))
-                || (Build.BRAND.equalsIgnoreCase("huawei")) || Build.BRAND.equalsIgnoreCase("oppo")
-                || Build.BRAND.equalsIgnoreCase("vivo")) {
-            ///////////////////////////////////-------------------/////////////////////////
-            testAutostart();
-        }
-        IgnoreBattery();
-
         mPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         medit = mPref.edit();
         fab.setOnClickListener(new View.OnClickListener() {
@@ -123,8 +112,25 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             }
         });
         //callActivity();
+        initView();
     }
 
+
+    public void initView(){
+
+        if (arePermissionsEnabled()) { } else {
+            requestMultiplePermissions();
+        }
+        if (Build.BRAND.equalsIgnoreCase("xiaomi") || (Build.BRAND.equalsIgnoreCase("Letv"))
+                || (Build.BRAND.equalsIgnoreCase("huawei")) || Build.BRAND.equalsIgnoreCase("oppo")
+                || Build.BRAND.equalsIgnoreCase("vivo")) {
+            ///////////////////////////////////-------------------/////////////////////////
+            testAutostart();
+        }
+        IgnoreBattery();
+        //getRecentStateEntry();
+        getAllState();
+    }
 
     @Override
     protected void onStart() {
@@ -154,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     @Override
     protected void onResume() {
         super.onResume();
-        DetectCorrectActivity(checkState());
+        DetectActivity(checkState());
 
 
     }
@@ -164,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         final String row = event.getActivityState();
         try {
             if (!isNullOrEmpty(row)) {
-                DetectCorrectActivity(row);
+                DetectActivity(row);
             } else {
                 callActivity();
             }
@@ -179,16 +185,17 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     detect state through google activity reco during forground..
      */
 
-    public void DetectCorrectActivity(final String row) {
+    public String DetectActivity(final String row) {
         if (row.equals("STILL")) {
             icon = R.drawable.ic_still;
         }
         data.setText(row);
         img_activity.setImageResource(icon);
+        return row;
     }
 
 
-    private void exportDB() {
+    public void exportDB() {
         try {
             File exportDir = new File(Environment.getExternalStorageDirectory(), "");
             if (!exportDir.exists()) {
@@ -257,7 +264,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         try {
             if (s.equals(StateResultHelper.KEY_ACTIVITY_STATE_RESULT)) {
                 final String row = StateResultHelper.getSavedActivityState(getApplicationContext());
-                DetectCorrectActivity(row);
+                DetectActivity(row);
             } else {
                 callActivity();
             }
@@ -268,6 +275,16 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     }
 
+    public ArrayList<HashMap<String,String>> getAllState(){
+       return SQLITEHELPER.getAllState();
+
+    }
+
+
+    public  ArrayList<HashMap<String,String>> getRecentStateEntry(){
+        return SQLITEHELPER.getRecentEntry();
+
+    }
 
     private boolean arePermissionsEnabled() {
         for (String permission : permissions) {

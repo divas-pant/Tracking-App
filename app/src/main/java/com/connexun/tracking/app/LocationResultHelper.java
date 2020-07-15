@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 
 import android.app.Notification;
@@ -31,7 +31,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.TaskStackBuilder;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;

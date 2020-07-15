@@ -1,4 +1,4 @@
-package com.example.anna.activityapp.utils;
+package com.connexun.tracking.app.utils;
 
 import android.content.Context;
 import android.content.Intent;

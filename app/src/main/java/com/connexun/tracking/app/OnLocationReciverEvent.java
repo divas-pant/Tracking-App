@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 /*......
 Pass location to bakground reciver to main activity
  */

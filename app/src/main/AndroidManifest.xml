@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.anna.activityapp">
+    package="com.connexun.tracking.app">
 
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
-        android:name=".App"
+        android:name="com.connexun.tracking.app.App"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -20,7 +20,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.connexun.tracking.app.MainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,17 +29,17 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ListViewActivity"
+            android:name="com.connexun.tracking.app.ListViewActivity"
             android:label="LISTVIEWACTIVITY" />
 
-        <receiver android:name=".BootCompletedIntentReceiver">
+        <receiver android:name="com.connexun.tracking.app.BootCompletedIntentReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
         <receiver
-            android:name=".MyActivityTrackReciver"
+            android:name="com.connexun.tracking.app.MyActivityTrackReciver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -47,7 +47,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:name=".LocationUpdatesBroadcastReceiver"
+            android:name="com.connexun.tracking.app.LocationUpdatesBroadcastReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.location.sample.backgroundlocationupdates.LocationUpdatesBroadcastReceiver.ACTION_PROCESS_UPDATES" />

@@ -1,10 +1,9 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.NonNull;
 import android.widget.Toast;
 
 import com.google.android.gms.location.ActivityRecognition;
@@ -12,9 +11,6 @@ import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 

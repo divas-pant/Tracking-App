@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.app.Notification;
 import android.app.NotificationChannel;

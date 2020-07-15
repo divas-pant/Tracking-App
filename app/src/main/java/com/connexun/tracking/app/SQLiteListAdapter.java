@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.content.Context;
 import android.view.LayoutInflater;

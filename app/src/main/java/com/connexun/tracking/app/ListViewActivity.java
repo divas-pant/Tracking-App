@@ -1,4 +1,4 @@
-package com.example.anna.activityapp;
+package com.connexun.tracking.app;
 
 import android.app.Activity;
 import android.database.Cursor;
@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.widget.ListView;
 
-import com.example.anna.activityapp.db.SQLiteHelper;
+import com.connexun.tracking.app.db.SQLiteHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
