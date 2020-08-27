@@ -15,6 +15,5 @@ dependencies {
 		}
 	}
   
-  https://jitpack.io/#org.bitbucket.Connexun.activityapp.src.master/
-  
+https://jitpack.io/#ravindra1992/Tracking-App/0.1.0  
   
