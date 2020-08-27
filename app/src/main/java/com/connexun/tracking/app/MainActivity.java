@@ -35,13 +35,9 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.crashlytics.android.Crashlytics;
 import com.connexun.tracking.app.db.SQLiteHelper;
 import com.google.android.gms.location.ActivityRecognition;
 import com.opencsv.CSVWriter;
-
-import io.fabric.sdk.android.Fabric;
-
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
@@ -64,7 +60,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     private int version = 1, icon;
     private Button save, fab;
     ImageView img_activity;
-    String SQLiteQuery;
     SQLiteDatabase SQLITEDATABASE;
     SQLiteHelper SQLITEHELPER;
     Cursor cursor;
@@ -74,16 +69,19 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             .ACCESS_FINE_LOCATION};
     AlertDialog.Builder mBuilder;
     AlertDialog mDialog;
+    static MainActivity activityA;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Fabric.with(this, new Crashlytics());
         setContentView(R.layout.activity_main);
         save = findViewById(R.id.btn_save);
         fab = findViewById(R.id.fab);
         data = findViewById(R.id.Result);
         data.setText("Waiting for Activity Detection");
         img_activity = findViewById(R.id.img_activity);
+        activityA = this;
         mBuilder = new AlertDialog.Builder(MainActivity.this);
         mDialog = mBuilder.create();
         SQLITEHELPER = new SQLiteHelper(getApplicationContext());
@@ -115,7 +113,9 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         initView();
     }
 
-
+    public static MainActivity getInstance(){
+        return   activityA;
+    }
     public void initView(){
 
         if (arePermissionsEnabled()) { } else {
@@ -143,7 +143,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             }
 
         } catch (Exception e) {
-            Crashlytics.logException(e);
         }
 
 
@@ -176,7 +175,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         }
 
     }
@@ -221,7 +219,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 curCSV.close();
             } catch (Exception sqlEx) {
                 sqlEx.printStackTrace();
-                Crashlytics.logException(sqlEx);
             }
 
             Intent email = new Intent(Intent.ACTION_SEND);
@@ -233,7 +230,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             version++;
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         }
 
 
@@ -251,7 +247,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     .unregisterOnSharedPreferenceChangeListener(this);
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         }
     }
 
@@ -270,7 +265,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         }
 
     }

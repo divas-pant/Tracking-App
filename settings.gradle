@@ -1,1 +1,4 @@
+include ':trackinglib'
+include ':app:trackingLib'
+include ':mylibrary'
 include ':app'

@@ -18,7 +18,6 @@ public class App extends Application {
         super.onCreate();
 
         ArrayList transitions = new ArrayList();
-
         transitions.add(new ActivityTransition.Builder()
                 .setActivityType(DetectedActivity.STILL)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)

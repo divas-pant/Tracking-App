@@ -26,7 +26,6 @@ import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 
 
-import com.crashlytics.android.Crashlytics;
 import com.connexun.tracking.app.db.SQLiteHelper;
 import com.connexun.tracking.app.utils.Consants;
 import com.google.android.gms.location.ActivityRecognition;
@@ -55,7 +54,6 @@ import java.util.StringTokenizer;
 
 import static android.content.Context.MODE_PRIVATE;
 import static com.connexun.tracking.app.utils.Consants.getBatteryPercentage;
-import static io.fabric.sdk.android.services.network.HttpRequest.post;
 
 
 /*......
@@ -80,7 +78,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
     ,activity_trans="",transitionType="",add = "",store_recent_activity_state="",activity_detected_time="",loc_event="",row;
     int confidence_score = 0;
     @SuppressLint("NewApi")
-
     private LocationRequest mLocationRequest;
     LocationManager locationManager;
     float range =0.5f; // kilo Meters
@@ -158,7 +155,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             }
 
         }catch (Exception e){
-            Crashlytics.logException(e);
         }
 
 
@@ -193,7 +189,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                Crashlytics.logException(e);
             }
         }else{
             System.out.println("2");
@@ -392,7 +387,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                      showNotification(online_lat,online_long);
                      InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
                  }catch (Exception e){
-                     Crashlytics.logException(e);
                  }
              }else {
                  removeDataFromPref();
@@ -405,7 +399,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
                  try {
                      InsertStateDataIntoDB(store_recent_activity_state, System.currentTimeMillis(), "");
                  }catch (Exception e){
-                     Crashlytics.logException(e);
                  }
 
              }else {
@@ -485,7 +478,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
 
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         }
         cursor.close();
 
@@ -563,7 +555,6 @@ public class MyActivityTrackReciver extends BroadcastReceiver {
             SQLITEDATABASE.execSQL(SQLiteQuery);
         } catch (Exception e) {
             e.printStackTrace();
-            Crashlytics.logException(e);
         } finally {
             removeLocationUpdates();
             LocationResultHelper.clearData(mContext);

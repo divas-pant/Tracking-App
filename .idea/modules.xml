@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Connexun_ActivityApp_14thjuly-activityapp.iml" filepath="$PROJECT_DIR$/.idea/modules/Connexun_ActivityApp_14thjuly-activityapp.iml" group="activityapp" />
-      <module fileurl="file://$PROJECT_DIR$/activityapp.iml" filepath="$PROJECT_DIR$/activityapp.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/activityapp-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/activityapp-app.iml" group="activityapp/app" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/activityapp.iml" filepath="$PROJECT_DIR$/.idea/modules/activityapp.iml" group="activityapp" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/app.iml" group="activityapp/app" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/mylibrary/mylibrary.iml" filepath="$PROJECT_DIR$/.idea/modules/mylibrary/mylibrary.iml" group="activityapp/mylibrary" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/trackingLib/trackingLib.iml" filepath="$PROJECT_DIR$/.idea/modules/app/trackingLib/trackingLib.iml" group="activityapp/app/trackingLib" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/trackinglib/trackinglib.iml" filepath="$PROJECT_DIR$/.idea/modules/trackinglib/trackinglib.iml" group="activityapp/trackinglib" />
     </modules>
   </component>
 </project>
