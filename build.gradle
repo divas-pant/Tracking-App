@@ -17,6 +17,11 @@ allprojects {
     repositories {
         jcenter()
         google()
+
+        maven {
+            url "https://jitpack.io"
+            credentials { username authToken }
+        }
     }
 }
 
